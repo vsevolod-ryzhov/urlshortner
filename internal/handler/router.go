@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -16,7 +17,8 @@ import (
 )
 
 func handleCreateLink(res http.ResponseWriter, req *http.Request) {
-	body := make([]byte, req.ContentLength)
+	var body []byte
+	var err error
 
 	if req.Header.Get("Content-Type") == "application/json" {
 		var requestModel model.JSONRequest
@@ -28,8 +30,8 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 		}
 		body = []byte(requestModel.URL)
 	} else {
-		_, err := req.Body.Read(body)
-		if err != nil && err.Error() != "EOF" {
+		body, err = io.ReadAll(req.Body)
+		if err != nil {
 			http.Error(res, "Bad request", http.StatusBadRequest)
 			return
 		}
