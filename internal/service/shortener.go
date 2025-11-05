@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 )
@@ -14,12 +15,23 @@ var (
 	mutex       sync.RWMutex
 )
 
+type ShortenedRecord struct {
+	UUID        string `json:"uuid,omitempty"`
+	ShortURL    string `json:"short_url,omitempty"`
+	OriginalURL string `json:"original_url,omitempty"`
+}
+
 func CreateShortURL(url string) string {
 	shortID := generateShortID(url)
 
 	mutex.Lock()
 	urlStorage[shortID] = url
 	mutex.Unlock()
+
+	err := SaveToFile()
+	if err != nil {
+		fmt.Println("Error saving to file")
+	}
 
 	return shortID
 }
