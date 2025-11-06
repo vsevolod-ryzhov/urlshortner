@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func handleCreateLink(res http.ResponseWriter, req *http.Request) {
+func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
 	var body []byte
 	var err error
 
@@ -25,31 +25,20 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 		dec := json.NewDecoder(req.Body)
 		if err := dec.Decode(&requestModel); err != nil {
 			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			res.WriteHeader(http.StatusInternalServerError)
-			return
+			return nil, err
 		}
-		body = []byte(requestModel.URL)
-	} else {
-		body, err = io.ReadAll(req.Body)
-		if err != nil {
-			http.Error(res, "Bad request", http.StatusBadRequest)
-			return
-		}
+		return []byte(requestModel.URL), nil
 	}
 
-	url := string(body)
-
-	shortened, errCreation := service.CreateShortURL(url)
-	if errCreation != nil {
-		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+	body, err = io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
 	}
 
-	baseURL := config.Options.ShortenedBaseURL
-	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-		baseURL = "http://" + baseURL
-	}
-	shortenedURL := fmt.Sprintf("%s/%s", strings.TrimSuffix(baseURL, "/"), shortened)
+	return body, nil
+}
 
+func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortenedURL string) {
 	if req.Header.Get("Content-Type") == "application/json" {
 		resp := model.JSONResponse{
 			Result: shortenedURL,
@@ -60,16 +49,45 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(resp); err != nil {
 			logger.Log.Debug("error encoding response", zap.Error(err))
-			return
 		}
-	} else {
-		res.Header().Set("Content-Type", "text/plain")
-		res.WriteHeader(http.StatusCreated)
-		_, err := res.Write([]byte(shortenedURL))
-		if err != nil {
-			return
-		}
+
+		return
 	}
+
+	res.Header().Set("Content-Type", "text/plain")
+	res.WriteHeader(http.StatusCreated)
+	_, err := res.Write([]byte(shortenedURL))
+
+	if err != nil {
+		logger.Log.Debug("error writing response", zap.Error(err))
+	}
+}
+
+func formatShortenedURL(shortenedURL string) string {
+	baseURL := config.Options.ShortenedBaseURL
+	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
+		baseURL = "http://" + baseURL
+	}
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(baseURL, "/"), shortenedURL)
+}
+
+func handleCreateLink(res http.ResponseWriter, req *http.Request) {
+	var body []byte
+	var err error
+
+	body, err = readCreateLinkRequestBody(req)
+	if err != nil {
+		http.Error(res, "Bad request", http.StatusBadRequest)
+	}
+
+	url := string(body)
+
+	shortened, errCreation := service.CreateShortURL(url)
+	if errCreation != nil {
+		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+	}
+
+	sendCreateLinkResponse(res, req, formatShortenedURL(shortened))
 }
 
 func handleGetLink(res http.ResponseWriter, req *http.Request) {

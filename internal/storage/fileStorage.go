@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bufio"
 	"encoding/json"
 	"os"
 	"sync"
@@ -11,34 +12,33 @@ import (
 
 var mutex sync.RWMutex
 
-func initEmptyFile() error {
-	var emptyArray []model.ShortenedRecord
-	data, err := json.Marshal(emptyArray)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(config.Options.StorageFilePath, data, 0644)
-}
-
 func LoadFromFile() ([]model.ShortenedRecord, error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	data, err := os.ReadFile(config.Options.StorageFilePath)
+	file, err := os.OpenFile(config.Options.StorageFilePath, os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, initEmptyFile()
-		}
 		return nil, err
 	}
-
-	if len(data) == 0 {
-		return nil, initEmptyFile()
-	}
+	defer file.Close()
 
 	var records []model.ShortenedRecord
-	if err := json.Unmarshal(data, &records); err != nil {
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		var record model.ShortenedRecord
+		if err := json.Unmarshal(line, &record); err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+
+	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
@@ -46,22 +46,18 @@ func LoadFromFile() ([]model.ShortenedRecord, error) {
 }
 
 func SaveToFile(record model.ShortenedRecord) error {
-	data, err := os.ReadFile(config.Options.StorageFilePath)
+	file, err := os.OpenFile(config.Options.StorageFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	var records []model.ShortenedRecord
-	if err := json.Unmarshal(data, &records); err != nil {
+	writer := bufio.NewWriter(file)
+	encoder := json.NewEncoder(writer)
+
+	if err := encoder.Encode(record); err != nil {
 		return err
 	}
 
-	records = append(records, record)
-
-	newData, err := json.Marshal(records)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(config.Options.StorageFilePath, newData, 0644)
+	return writer.Flush()
 }
