@@ -13,7 +13,7 @@ import (
 
 func main() {
 	config.ParseFlags()
-	if err := service.LoadFromFile(); err != nil {
+	if err := service.InitStorage(); err != nil {
 		fmt.Printf("Error loading data storage file: %v\n", err)
 	}
 

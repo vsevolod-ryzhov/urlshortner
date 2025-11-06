@@ -7,53 +7,82 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/storage"
 )
 
 var (
 	ErrNotFound = errors.New("URL not found")
-	urlStorage  = make(map[string]string)
+	urlStorage  = make(map[string]model.ShortenedRecord)
 	mutex       sync.RWMutex
 )
 
-type ShortenedRecord struct {
-	UUID        string `json:"uuid,omitempty"`
-	ShortURL    string `json:"short_url,omitempty"`
-	OriginalURL string `json:"original_url,omitempty"`
+func generateUUID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func CreateShortURL(url string) string {
-	shortID := generateShortID(url)
-
+func InitStorage() error {
 	mutex.Lock()
-	urlStorage[shortID] = url
-	mutex.Unlock()
+	defer mutex.Unlock()
 
-	err := SaveToFile()
+	records, err := storage.LoadFromFile()
+
 	if err != nil {
-		fmt.Println("Error saving to file")
+		return err
 	}
 
-	return shortID
+	for _, record := range records {
+		urlStorage[record.ShortURL] = record
+	}
+
+	return nil
+}
+
+func CreateShortURL(url string) (string, error) {
+	shortID := generateShortID(url)
+
+	if existingRecord, exists := urlStorage[shortID]; exists {
+		return existingRecord.ShortURL, nil
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	record := model.ShortenedRecord{
+		UUID:        generateUUID(),
+		ShortURL:    shortID,
+		OriginalURL: url,
+	}
+
+	urlStorage[shortID] = record
+
+	if err := storage.SaveToFile(record); err != nil {
+		return shortID, err
+	}
+
+	return shortID, nil
 }
 
 func GetURL(id string) (string, error) {
 	mutex.RLock()
-	url, exists := urlStorage[id]
+	record, exists := urlStorage[id]
 	mutex.RUnlock()
 
 	if !exists {
 		return "", ErrNotFound
 	}
 
-	return url, nil
+	return record.OriginalURL, nil
 }
 
 func generateShortID(originalURL string) string {
 	mutex.RLock()
-	id, ok := urlStorage[originalURL]
+	record, ok := urlStorage[originalURL]
 	if ok {
 		mutex.RUnlock()
-		return id
+		return record.ShortURL
 	}
 	mutex.RUnlock()
 

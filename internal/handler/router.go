@@ -39,7 +39,11 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	url := string(body)
 
-	shortened := service.CreateShortURL(url)
+	shortened, errCreation := service.CreateShortURL(url)
+	if errCreation != nil {
+		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+	}
+
 	baseURL := config.Options.ShortenedBaseURL
 	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
 		baseURL = "http://" + baseURL
