@@ -4,44 +4,89 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/storage"
 )
 
 var (
 	ErrNotFound = errors.New("URL not found")
-	urlStorage  = make(map[string]string)
+	urlStorage  = make(map[string]model.ShortenedRecord)
 	mutex       sync.RWMutex
 )
 
-func CreateShortURL(url string) string {
+func generateUUID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
+}
+
+func InitStorage() error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	records, err := storage.LoadFromFile()
+
+	if err != nil {
+		return err
+	}
+
+	for _, record := range records {
+		urlStorage[record.ShortURL] = record
+	}
+
+	return nil
+}
+
+func CreateShortURL(url string) (string, error) {
 	shortID := generateShortID(url)
 
-	mutex.Lock()
-	urlStorage[shortID] = url
-	mutex.Unlock()
+	mutex.RLock()
+	existingRecord, exists := urlStorage[shortID]
+	mutex.RUnlock()
 
-	return shortID
+	if exists {
+		return existingRecord.ShortURL, nil
+	}
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	record := model.ShortenedRecord{
+		UUID:        generateUUID(),
+		ShortURL:    shortID,
+		OriginalURL: url,
+	}
+
+	urlStorage[shortID] = record
+
+	if err := storage.SaveToFile(record); err != nil {
+		return shortID, err
+	}
+
+	return shortID, nil
 }
 
 func GetURL(id string) (string, error) {
 	mutex.RLock()
-	url, exists := urlStorage[id]
+	record, exists := urlStorage[id]
 	mutex.RUnlock()
 
 	if !exists {
 		return "", ErrNotFound
 	}
 
-	return url, nil
+	return record.OriginalURL, nil
 }
 
 func generateShortID(originalURL string) string {
 	mutex.RLock()
-	id, ok := urlStorage[originalURL]
+	record, ok := urlStorage[originalURL]
 	if ok {
 		mutex.RUnlock()
-		return id
+		return record.ShortURL
 	}
 	mutex.RUnlock()
 

@@ -1,37 +1,93 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
+	"go.uber.org/zap"
 )
 
-func handleCreateLink(res http.ResponseWriter, req *http.Request) {
-	body := make([]byte, req.ContentLength)
+func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
+	var body []byte
+	var err error
 
-	_, err := req.Body.Read(body)
-	if err != nil && err.Error() != "EOF" {
-		http.Error(res, "Bad request", http.StatusBadRequest)
+	if req.Header.Get("Content-Type") == "application/json" {
+		var requestModel model.JSONRequest
+		dec := json.NewDecoder(req.Body)
+		if err := dec.Decode(&requestModel); err != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+			return nil, err
+		}
+		return []byte(requestModel.URL), nil
+	}
+
+	body, err = io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	return body, nil
+}
+
+func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortenedURL string) {
+	if req.Header.Get("Content-Type") == "application/json" {
+		resp := model.JSONResponse{
+			Result: shortenedURL,
+		}
+		res.Header().Set("Content-Type", "application/json")
+		res.WriteHeader(http.StatusCreated)
+
+		enc := json.NewEncoder(res)
+		if err := enc.Encode(resp); err != nil {
+			logger.Log.Debug("error encoding response", zap.Error(err))
+		}
+
 		return
 	}
 
-	url := string(body)
+	res.Header().Set("Content-Type", "text/plain")
+	res.WriteHeader(http.StatusCreated)
+	_, err := res.Write([]byte(shortenedURL))
 
-	shortened := service.CreateShortURL(url)
+	if err != nil {
+		logger.Log.Debug("error writing response", zap.Error(err))
+	}
+}
+
+func formatShortenedURL(shortenedURL string) string {
 	baseURL := config.Options.ShortenedBaseURL
 	if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
 		baseURL = "http://" + baseURL
 	}
-	shortenedURL := fmt.Sprintf("%s/%s", strings.TrimSuffix(baseURL, "/"), shortened)
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(baseURL, "/"), shortenedURL)
+}
 
-	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusCreated)
-	res.Write([]byte(shortenedURL))
+func handleCreateLink(res http.ResponseWriter, req *http.Request) {
+	var body []byte
+	var err error
+
+	body, err = readCreateLinkRequestBody(req)
+	if err != nil {
+		http.Error(res, "Bad request", http.StatusBadRequest)
+	}
+
+	url := string(body)
+
+	shortened, errCreation := service.CreateShortURL(url)
+	if errCreation != nil {
+		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+	}
+
+	sendCreateLinkResponse(res, req, formatShortenedURL(shortened))
 }
 
 func handleGetLink(res http.ResponseWriter, req *http.Request) {
@@ -51,14 +107,15 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 		}
 		return
 	}
-	res.Header().Add("Location", url)
-	res.WriteHeader(http.StatusTemporaryRedirect)
+
+	http.Redirect(res, req, url, http.StatusTemporaryRedirect)
 }
 
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
 	r.Post("/", handleCreateLink)
+	r.Post("/api/shorten", handleCreateLink)
 
 	return r
 }
