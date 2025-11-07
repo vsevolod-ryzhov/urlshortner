@@ -43,7 +43,11 @@ func InitStorage() error {
 func CreateShortURL(url string) (string, error) {
 	shortID := generateShortID(url)
 
-	if existingRecord, exists := urlStorage[shortID]; exists {
+	mutex.RLock()
+	existingRecord, exists := urlStorage[shortID]
+	mutex.RUnlock()
+
+	if exists {
 		return existingRecord.ShortURL, nil
 	}
 
