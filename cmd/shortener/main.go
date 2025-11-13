@@ -1,13 +1,16 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 )
 
@@ -18,8 +21,16 @@ func main() {
 	}
 
 	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
+
 		panic(err)
 	}
+
+	var dbErr error
+	repository.DB, dbErr = sql.Open("pgx", config.Options.DatabaseDSN)
+	if dbErr != nil {
+		panic(dbErr)
+	}
+	defer repository.DB.Close()
 
 	srv := &http.Server{
 		Addr:         config.Options.AppPort,

@@ -1,17 +1,20 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
 )
@@ -111,9 +114,22 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 	http.Redirect(res, req, url, http.StatusTemporaryRedirect)
 }
 
+func handlePing(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if err := repository.DB.PingContext(ctx); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+}
+
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
+	r.Get("/ping", handlePing)
 	r.Post("/", handleCreateLink)
 	r.Post("/api/shorten", handleCreateLink)
 
