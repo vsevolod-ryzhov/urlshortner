@@ -78,6 +78,10 @@ func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) 
 		ret[record.UUID] = record
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return ret, nil
 }
 
