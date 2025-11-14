@@ -10,34 +10,31 @@ import (
 	"time"
 
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
-	"github.com/vsevolod-ryzhov/urlshortner.git/internal/storage"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 )
 
 var (
 	ErrNotFound = errors.New("URL not found")
 	urlStorage  = make(map[string]model.ShortenedRecord)
 	mutex       sync.RWMutex
+	Repo        repository.Repository
 )
 
-func generateUUID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
-}
+func InitRepo(r repository.Repository) error {
+	Repo = r
 
-func InitStorage() error {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	records, err := storage.LoadFromFile()
+	var err error
+	urlStorage, err = r.GetAll()
 
 	if err != nil {
 		return err
 	}
 
-	for _, record := range records {
-		urlStorage[record.ShortURL] = record
-	}
-
 	return nil
+}
+
+func generateUUID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
 func CreateShortURL(url string) (string, error) {
@@ -62,9 +59,12 @@ func CreateShortURL(url string) (string, error) {
 
 	urlStorage[shortID] = record
 
-	if err := storage.SaveToFile(record); err != nil {
-		return shortID, err
+	if Repo != nil {
+		Repo.Save(&record)
 	}
+	//if err := storage.SaveToFile(record); err != nil {
+	//	return shortID, err
+	//}
 
 	return shortID, nil
 }

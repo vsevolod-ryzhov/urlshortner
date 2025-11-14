@@ -1,8 +1,6 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -16,21 +14,32 @@ import (
 
 func main() {
 	config.ParseFlags()
-	if err := service.InitStorage(); err != nil {
-		fmt.Printf("Error loading data storage file: %v\n", err)
-	}
+	//if err := service.InitStorage(); err != nil {
+	//	fmt.Printf("Error loading data storage file: %v\n", err)
+	//}
 
 	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
 
 		panic(err)
 	}
 
-	var dbErr error
-	repository.DB, dbErr = sql.Open("pgx", config.Options.DatabaseDSN)
-	if dbErr != nil {
-		panic(dbErr)
+	//if len(config.Options.DatabaseDSN) > 0 {
+	//	var dbErr error
+	//	repository.DB, dbErr = sql.Open("pgx", config.Options.DatabaseDSN)
+	//	if dbErr != nil {
+	//		panic(dbErr)
+	//	}
+	//	defer repository.DB.Close()
+	//}
+
+	repo, repoErr := repository.NewRepository()
+	if repoErr != nil {
+		panic(repoErr)
 	}
-	defer repository.DB.Close()
+	if repo != nil {
+		defer repo.Close()
+		service.InitRepo(repo)
+	}
 
 	srv := &http.Server{
 		Addr:         config.Options.AppPort,

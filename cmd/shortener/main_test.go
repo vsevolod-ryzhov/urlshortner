@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 )
 
@@ -30,6 +31,11 @@ func testRequest(t *testing.T, ts *httptest.Server, method string, path string, 
 
 func TestRouter(t *testing.T) {
 	config.ParseFlags()
+	repo, repoErr := repository.NewRepository()
+	if repoErr != nil {
+		panic(repoErr)
+	}
+	service.InitRepo(repo)
 	ts := httptest.NewServer(handler.MakeHandler())
 	defer ts.Close()
 	originalURL := "https://ya.ru"

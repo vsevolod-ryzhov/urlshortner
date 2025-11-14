@@ -14,7 +14,6 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
-	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
 )
@@ -118,7 +117,7 @@ func handlePing(res http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	if err := repository.DB.PingContext(ctx); err != nil {
+	if err := service.Repo.Ping(ctx); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}

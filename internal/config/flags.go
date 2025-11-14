@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 	"os"
 )
 
@@ -19,8 +18,7 @@ func ParseFlags() {
 	flag.StringVar(&Options.ShortenedBaseURL, "b", "localhost:8080", "The base url of shortened")
 	flag.StringVar(&Options.FlagLogLevel, "l", "info", "log level")
 	flag.StringVar(&Options.StorageFilePath, "f", "/tmp/shortenerStorage", "Path to the file where the shortened URLs will be stored")
-	flag.StringVar(&Options.DatabaseDSN, "d", fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
-		`localhost`, `postgres_user`, `postgres_password`, `postgres_db`), "Database connection string")
+	flag.StringVar(&Options.DatabaseDSN, "d", "", "Database connection string")
 
 	flag.Parse()
 
