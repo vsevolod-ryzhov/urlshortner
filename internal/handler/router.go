@@ -125,12 +125,51 @@ func handlePing(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
+func handleBatch(res http.ResponseWriter, req *http.Request) {
+	if req.Header.Get("Content-Type") != "application/json" {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var requestModel model.JSONBatchRequest
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&requestModel); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		fmt.Println(err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var responseModel model.JSONBatchResponse
+	for _, request := range requestModel {
+		shortened, errCreation := service.CreateShortURL(request.OriginalURL)
+		if errCreation != nil {
+			logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+		}
+
+		responseModel = append(responseModel, model.JSONBatchResponseItem{
+			CorrelationID: request.CorrelationID,
+			ShortURL:      formatShortenedURL(shortened),
+		})
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(res).Encode(responseModel); err != nil {
+		logger.Log.Debug("Failed to encode response", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
 	r.Get("/ping", handlePing)
 	r.Post("/", handleCreateLink)
 	r.Post("/api/shorten", handleCreateLink)
+	r.Post("/api/shorten/batch", handleBatch)
 
 	return r
 }
