@@ -23,8 +23,10 @@ var (
 func InitRepo(r repository.Repository) error {
 	Repo = r
 
-	var err error
-	urlStorage, err = r.GetAll()
+	records, err := r.GetAll()
+	if err == nil && len(records) > 0 {
+		urlStorage = records
+	}
 
 	if err != nil {
 		return err
@@ -62,9 +64,6 @@ func CreateShortURL(url string) (string, error) {
 	if Repo != nil {
 		Repo.Save(&record)
 	}
-	//if err := storage.SaveToFile(record); err != nil {
-	//	return shortID, err
-	//}
 
 	return shortID, nil
 }
