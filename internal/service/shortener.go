@@ -42,7 +42,7 @@ func CreateShortURL(url string) (string, bool, error) {
 		var exists bool
 		mutex.RLock()
 		existingRecord, exists = urlStorage[shortID]
-		defer mutex.RUnlock()
+		mutex.RUnlock()
 		if exists {
 			return existingRecord.ShortURL, true, nil
 		}
