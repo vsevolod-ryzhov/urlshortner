@@ -114,7 +114,7 @@ func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) 
 			return nil, err
 		}
 
-		ret[record.UUID] = record
+		ret[record.ShortURL] = record
 	}
 
 	if err := rows.Err(); err != nil {
@@ -136,4 +136,8 @@ func (r *PostgresRepository) Close() error {
 	r.db.Close()
 
 	return nil
+}
+
+func (r *PostgresRepository) GetData() map[string]model.ShortenedRecord {
+	return make(map[string]model.ShortenedRecord)
 }

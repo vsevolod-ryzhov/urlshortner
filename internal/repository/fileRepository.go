@@ -90,7 +90,7 @@ func (r *FileRepository) loadFromFile() error {
 		if err := json.Unmarshal(line, &record); err != nil {
 			return err
 		}
-		r.data[record.UUID] = record
+		r.data[record.ShortURL] = record
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -123,4 +123,8 @@ func (r *FileRepository) Ping(ctx context.Context) error {
 
 func (r *FileRepository) Close() error {
 	return nil
+}
+
+func (r *FileRepository) GetData() map[string]model.ShortenedRecord {
+	return r.data
 }

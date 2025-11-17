@@ -40,13 +40,17 @@ func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortenedURL string) {
+func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortenedURL string, alreadyExists bool) {
 	if req.Header.Get("Content-Type") == "application/json" {
 		resp := model.JSONResponse{
 			Result: shortenedURL,
 		}
 		res.Header().Set("Content-Type", "application/json")
-		res.WriteHeader(http.StatusCreated)
+		if !alreadyExists {
+			res.WriteHeader(http.StatusCreated)
+		} else {
+			res.WriteHeader(http.StatusConflict)
+		}
 
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(resp); err != nil {
@@ -57,7 +61,11 @@ func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortene
 	}
 
 	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusCreated)
+	if !alreadyExists {
+		res.WriteHeader(http.StatusCreated)
+	} else {
+		res.WriteHeader(http.StatusConflict)
+	}
 	_, err := res.Write([]byte(shortenedURL))
 
 	if err != nil {
@@ -84,12 +92,12 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	url := string(body)
 
-	shortened, errCreation := service.CreateShortURL(url)
+	shortened, alreadyExists, errCreation := service.CreateShortURL(url)
 	if errCreation != nil {
 		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 	}
 
-	sendCreateLinkResponse(res, req, formatShortenedURL(shortened))
+	sendCreateLinkResponse(res, req, formatShortenedURL(shortened), alreadyExists)
 }
 
 func handleGetLink(res http.ResponseWriter, req *http.Request) {
@@ -142,7 +150,7 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 
 	var responseModel model.JSONBatchResponse
 	for _, request := range requestModel {
-		shortened, errCreation := service.CreateShortURL(request.OriginalURL)
+		shortened, _, errCreation := service.CreateShortURL(request.OriginalURL)
 		if errCreation != nil {
 			logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 		}

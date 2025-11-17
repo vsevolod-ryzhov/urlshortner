@@ -23,13 +23,8 @@ var (
 func InitRepo(r repository.Repository) error {
 	Repo = r
 
-	records, err := r.GetAll()
-	if err == nil && len(records) > 0 {
-		urlStorage = records
-	}
-
-	if err != nil {
-		return err
+	if Repo != nil {
+		urlStorage = Repo.GetData()
 	}
 
 	return nil
@@ -39,15 +34,25 @@ func generateUUID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func CreateShortURL(url string) (string, error) {
+func CreateShortURL(url string) (string, bool, error) {
 	shortID := generateShortID(url)
 
-	mutex.RLock()
-	existingRecord, exists := urlStorage[shortID]
-	mutex.RUnlock()
-
-	if exists {
-		return existingRecord.ShortURL, nil
+	if Repo == nil {
+		var existingRecord model.ShortenedRecord
+		var exists bool
+		mutex.RLock()
+		existingRecord, exists = urlStorage[shortID]
+		defer mutex.RUnlock()
+		if exists {
+			return existingRecord.ShortURL, true, nil
+		}
+	} else {
+		var r *model.ShortenedRecord
+		var e error
+		r, e = Repo.GetByShortURL(shortID)
+		if e == nil {
+			return r.ShortURL, true, nil
+		}
 	}
 
 	mutex.Lock()
@@ -65,7 +70,7 @@ func CreateShortURL(url string) (string, error) {
 		Repo.Save(&record)
 	}
 
-	return shortID, nil
+	return shortID, false, nil
 }
 
 func GetURL(id string) (string, error) {

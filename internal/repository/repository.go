@@ -13,4 +13,5 @@ type Repository interface {
 	GetAll() (map[string]model.ShortenedRecord, error)
 	Ping(ctx context.Context) error
 	Close() error
+	GetData() map[string]model.ShortenedRecord
 }
