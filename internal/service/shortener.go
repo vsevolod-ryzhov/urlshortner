@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
@@ -34,7 +35,7 @@ func generateUUID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func CreateShortURL(url string) (string, bool, error) {
+func CreateShortURL(ctx context.Context, url string) (string, bool, error) {
 	shortID := generateShortID(url)
 
 	if Repo == nil {
@@ -49,7 +50,7 @@ func CreateShortURL(url string) (string, bool, error) {
 	} else {
 		var r *model.ShortenedRecord
 		var e error
-		r, e = Repo.GetByShortURL(shortID)
+		r, e = Repo.GetByShortURL(ctx, shortID)
 		if e == nil {
 			return r.ShortURL, true, nil
 		}

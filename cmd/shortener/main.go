@@ -10,6 +10,7 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 
 	repo, repoErr := repository.NewRepository()
 	if repoErr != nil {
-		panic(repoErr)
+		logger.Log.Fatal("Failed to create repository", zap.Error(repoErr))
 	}
 	if repo != nil {
 		defer repo.Close()

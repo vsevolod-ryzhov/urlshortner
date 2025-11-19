@@ -32,7 +32,7 @@ func TestCreateShortURLAndGet(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			shortened, _, _ := CreateShortURL(tt.args.url)
+			shortened, _, _ := CreateShortURL(t.Context(), tt.args.url)
 
 			if shortened == "" {
 				t.Errorf("generateShortID(%q) returns empty string", tt.args.url)

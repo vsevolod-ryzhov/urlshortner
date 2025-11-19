@@ -10,6 +10,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/golang-migrate/migrate/v4/source/github"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 )
 
@@ -79,19 +80,19 @@ func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, err
 
 	err := r.db.QueryRow(query, uuid).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL)
 	if err == sql.ErrNoRows {
-		return nil, ErrNotFound
+		return nil, errors.ErrNotFound
 	}
 
 	return &record, err
 }
 
-func (r *PostgresRepository) GetByShortURL(shortURL string) (*model.ShortenedRecord, error) {
+func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
 	var record model.ShortenedRecord
 	query := `SELECT id, short, original FROM links WHERE short = $1`
 
-	err := r.db.QueryRow(query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL)
+	err := r.db.QueryRowContext(ctx, query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL)
 	if err == sql.ErrNoRows {
-		return nil, ErrNotFound
+		return nil, errors.ErrNotFound
 	}
 
 	return &record, err

@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
 
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 )
 
@@ -18,8 +18,6 @@ type FileRepository struct {
 	mu       sync.RWMutex
 	data     map[string]model.ShortenedRecord
 }
-
-var ErrNotFound = errors.New("record not found")
 
 func NewFileRepository(filePath string) (*FileRepository, error) {
 	repo := &FileRepository{
@@ -49,10 +47,10 @@ func (r *FileRepository) GetByUUID(uuid string) (*model.ShortenedRecord, error) 
 	if record, exists := r.data[uuid]; exists {
 		return &record, nil
 	}
-	return nil, ErrNotFound
+	return nil, errors.ErrNotFound
 }
 
-func (r *FileRepository) GetByShortURL(shortURL string) (*model.ShortenedRecord, error) {
+func (r *FileRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -61,7 +59,7 @@ func (r *FileRepository) GetByShortURL(shortURL string) (*model.ShortenedRecord,
 			return &record, nil
 		}
 	}
-	return nil, ErrNotFound
+	return nil, errors.ErrNotFound
 }
 
 func (r *FileRepository) GetAll() (map[string]model.ShortenedRecord, error) {

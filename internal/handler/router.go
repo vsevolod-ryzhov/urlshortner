@@ -18,6 +18,13 @@ import (
 	"go.uber.org/zap"
 )
 
+func getStatusCode(alreadyExists bool) int {
+	if !alreadyExists {
+		return http.StatusCreated
+	}
+	return http.StatusConflict
+}
+
 func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
 	var body []byte
 	var err error
@@ -46,11 +53,7 @@ func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortene
 			Result: shortenedURL,
 		}
 		res.Header().Set("Content-Type", "application/json")
-		if !alreadyExists {
-			res.WriteHeader(http.StatusCreated)
-		} else {
-			res.WriteHeader(http.StatusConflict)
-		}
+		res.WriteHeader(getStatusCode(alreadyExists))
 
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(resp); err != nil {
@@ -61,11 +64,7 @@ func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortene
 	}
 
 	res.Header().Set("Content-Type", "text/plain")
-	if !alreadyExists {
-		res.WriteHeader(http.StatusCreated)
-	} else {
-		res.WriteHeader(http.StatusConflict)
-	}
+	res.WriteHeader(getStatusCode(alreadyExists))
 	_, err := res.Write([]byte(shortenedURL))
 
 	if err != nil {
@@ -92,7 +91,7 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	url := string(body)
 
-	shortened, alreadyExists, errCreation := service.CreateShortURL(url)
+	shortened, alreadyExists, errCreation := service.CreateShortURL(req.Context(), url)
 	if errCreation != nil {
 		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 	}
@@ -150,7 +149,7 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 
 	var responseModel model.JSONBatchResponse
 	for _, request := range requestModel {
-		shortened, _, errCreation := service.CreateShortURL(request.OriginalURL)
+		shortened, _, errCreation := service.CreateShortURL(req.Context(), request.OriginalURL)
 		if errCreation != nil {
 			logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 		}
