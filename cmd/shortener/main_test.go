@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 )
 
@@ -30,14 +32,20 @@ func testRequest(t *testing.T, ts *httptest.Server, method string, path string, 
 
 func TestRouter(t *testing.T) {
 	config.ParseFlags()
+	os.Remove(config.Options.StorageFilePath)
+	repo, repoErr := repository.NewRepository()
+	if repoErr != nil {
+		panic(repoErr)
+	}
+	service.InitRepo(repo)
 	ts := httptest.NewServer(handler.MakeHandler())
 	defer ts.Close()
-	originalURL := "https://ya.ru"
+	originalURL := "https://ya.ru/"
 
 	resp, get := testRequest(t, ts, "POST", "/", strings.NewReader(originalURL))
 	defer resp.Body.Close()
 	code := strings.TrimPrefix(get, "http://"+config.Options.ShortenedBaseURL+"/")
-	shortURL, _ := service.CreateShortURL(originalURL)
+	shortURL, _, _ := service.CreateShortURL(t.Context(), originalURL)
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	assert.Equal(t, shortURL, code)
 

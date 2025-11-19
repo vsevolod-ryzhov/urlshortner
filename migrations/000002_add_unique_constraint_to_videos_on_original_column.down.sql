@@ -1,0 +1,1 @@
+ALTER TABLE links DROP CONSTRAINT IF EXISTS links_unique_original;

@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_links_short;
+DROP TABLE IF EXISTS links;

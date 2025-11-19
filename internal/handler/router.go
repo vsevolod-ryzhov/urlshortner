@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
@@ -15,6 +17,13 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
 )
+
+func getStatusCode(alreadyExists bool) int {
+	if !alreadyExists {
+		return http.StatusCreated
+	}
+	return http.StatusConflict
+}
 
 func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
 	var body []byte
@@ -38,13 +47,13 @@ func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortenedURL string) {
+func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortenedURL string, alreadyExists bool) {
 	if req.Header.Get("Content-Type") == "application/json" {
 		resp := model.JSONResponse{
 			Result: shortenedURL,
 		}
 		res.Header().Set("Content-Type", "application/json")
-		res.WriteHeader(http.StatusCreated)
+		res.WriteHeader(getStatusCode(alreadyExists))
 
 		enc := json.NewEncoder(res)
 		if err := enc.Encode(resp); err != nil {
@@ -55,7 +64,7 @@ func sendCreateLinkResponse(res http.ResponseWriter, req *http.Request, shortene
 	}
 
 	res.Header().Set("Content-Type", "text/plain")
-	res.WriteHeader(http.StatusCreated)
+	res.WriteHeader(getStatusCode(alreadyExists))
 	_, err := res.Write([]byte(shortenedURL))
 
 	if err != nil {
@@ -82,12 +91,12 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	url := string(body)
 
-	shortened, errCreation := service.CreateShortURL(url)
+	shortened, alreadyExists, errCreation := service.CreateShortURL(req.Context(), url)
 	if errCreation != nil {
 		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 	}
 
-	sendCreateLinkResponse(res, req, formatShortenedURL(shortened))
+	sendCreateLinkResponse(res, req, formatShortenedURL(shortened), alreadyExists)
 }
 
 func handleGetLink(res http.ResponseWriter, req *http.Request) {
@@ -111,11 +120,63 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 	http.Redirect(res, req, url, http.StatusTemporaryRedirect)
 }
 
+func handlePing(res http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if err := service.Repo.Ping(ctx); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+}
+
+func handleBatch(res http.ResponseWriter, req *http.Request) {
+	if req.Header.Get("Content-Type") != "application/json" {
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var requestModel model.JSONBatchRequest
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&requestModel); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		fmt.Println(err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var responseModel model.JSONBatchResponse
+	for _, request := range requestModel {
+		shortened, _, errCreation := service.CreateShortURL(req.Context(), request.OriginalURL)
+		if errCreation != nil {
+			logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+		}
+
+		responseModel = append(responseModel, model.JSONBatchResponseItem{
+			CorrelationID: request.CorrelationID,
+			ShortURL:      formatShortenedURL(shortened),
+		})
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(res).Encode(responseModel); err != nil {
+		logger.Log.Debug("Failed to encode response", zap.Error(err))
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
+	r.Get("/ping", handlePing)
 	r.Post("/", handleCreateLink)
 	r.Post("/api/shorten", handleCreateLink)
+	r.Post("/api/shorten/batch", handleBatch)
 
 	return r
 }

@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 )
 
 func TestHandlerPOSTSuccess(t *testing.T) {
+	os.Remove(config.Options.StorageFilePath)
 	requestBody := "https://ya.ru"
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(requestBody))
 
@@ -30,7 +33,8 @@ func TestHandlerPOSTSuccess(t *testing.T) {
 }
 
 func TestHandlerPOSTJsonSuccess(t *testing.T) {
-	requestModel := model.JSONRequest{URL: "https://ya.ru"}
+	os.Remove(config.Options.StorageFilePath)
+	requestModel := model.JSONRequest{URL: "https://google.ru"}
 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(requestModel)

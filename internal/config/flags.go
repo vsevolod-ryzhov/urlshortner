@@ -10,6 +10,7 @@ var Options struct {
 	ShortenedBaseURL string
 	FlagLogLevel     string
 	StorageFilePath  string
+	DatabaseDSN      string
 }
 
 func ParseFlags() {
@@ -17,6 +18,8 @@ func ParseFlags() {
 	flag.StringVar(&Options.ShortenedBaseURL, "b", "localhost:8080", "The base url of shortened")
 	flag.StringVar(&Options.FlagLogLevel, "l", "info", "log level")
 	flag.StringVar(&Options.StorageFilePath, "f", "/tmp/shortenerStorage", "Path to the file where the shortened URLs will be stored")
+	flag.StringVar(&Options.DatabaseDSN, "d", "", "Database connection string")
+
 	flag.Parse()
 
 	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
@@ -30,5 +33,8 @@ func ParseFlags() {
 	}
 	if storageFilePath := os.Getenv("FILE_STORAGE_PATH"); storageFilePath != "" {
 		Options.StorageFilePath = storageFilePath
+	}
+	if databaseDSN := os.Getenv("DATABASE_DSN"); databaseDSN != "" {
+		Options.DatabaseDSN = databaseDSN
 	}
 }

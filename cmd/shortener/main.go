@@ -1,24 +1,33 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
+	"go.uber.org/zap"
 )
 
 func main() {
 	config.ParseFlags()
-	if err := service.InitStorage(); err != nil {
-		fmt.Printf("Error loading data storage file: %v\n", err)
-	}
 
 	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
+
 		panic(err)
+	}
+
+	repo, repoErr := repository.NewRepository()
+	if repoErr != nil {
+		logger.Log.Fatal("Failed to create repository", zap.Error(repoErr))
+	}
+	if repo != nil {
+		defer repo.Close()
+		service.InitRepo(repo)
 	}
 
 	srv := &http.Server{
