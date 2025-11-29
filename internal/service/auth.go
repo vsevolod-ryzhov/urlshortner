@@ -20,9 +20,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type contextKey string
+
 const (
-	cookieName    = "user_session"
-	cookieExpires = 30 * 24 * time.Hour
+	cookieName               = "user_session"
+	cookieExpires            = 30 * 24 * time.Hour
+	userIDKey     contextKey = "userID"
 )
 
 var (
@@ -39,7 +42,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if cookie, err := r.Cookie(cookieName); err == nil {
 			session, err := decodeAndVerifyCookie(cookie.Value)
 			if err == nil && session.UserID != "" {
-				ctx := context.WithValue(r.Context(), "userID", session.UserID)
+				ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
@@ -52,7 +55,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "userID", session.UserID)
+		ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -169,4 +172,9 @@ func decrypt(ciphertext []byte) ([]byte, error) {
 
 	nonce, ciphertext := ciphertext[:nonceSize], ciphertext[nonceSize:]
 	return gcm.Open(nil, nonce, ciphertext, nil)
+}
+
+func GetUserIDFromContext(ctx context.Context) (string, bool) {
+	userID, ok := ctx.Value(userIDKey).(string)
+	return userID, ok
 }

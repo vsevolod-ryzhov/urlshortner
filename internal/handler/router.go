@@ -81,7 +81,7 @@ func formatShortenedURL(shortenedURL string) string {
 }
 
 func handleCreateLink(res http.ResponseWriter, req *http.Request) {
-	userID, ok := req.Context().Value("userID").(string)
+	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok {
 		userID = "unknown"
 	}
@@ -138,7 +138,7 @@ func handlePing(res http.ResponseWriter, req *http.Request) {
 }
 
 func handleBatch(res http.ResponseWriter, req *http.Request) {
-	userID, ok := req.Context().Value("userID").(string)
+	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok {
 		userID = "unknown"
 	}
@@ -183,7 +183,7 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 
-	userID, ok := req.Context().Value("userID").(string)
+	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok || userID == "" {
 		// Если кука присутствует, но не содержит ID пользователя - 401 Unauthorized
 		http.Error(res, "Unauthorized", http.StatusUnauthorized)
