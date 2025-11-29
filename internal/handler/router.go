@@ -81,6 +81,11 @@ func formatShortenedURL(shortenedURL string) string {
 }
 
 func handleCreateLink(res http.ResponseWriter, req *http.Request) {
+	userID, ok := req.Context().Value("userID").(string)
+	if !ok {
+		userID = "unknown"
+	}
+
 	var body []byte
 	var err error
 
@@ -91,7 +96,7 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	url := string(body)
 
-	shortened, alreadyExists, errCreation := service.CreateShortURL(req.Context(), url)
+	shortened, alreadyExists, errCreation := service.CreateShortURL(req.Context(), url, userID)
 	if errCreation != nil {
 		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 	}
@@ -133,6 +138,11 @@ func handlePing(res http.ResponseWriter, req *http.Request) {
 }
 
 func handleBatch(res http.ResponseWriter, req *http.Request) {
+	userID, ok := req.Context().Value("userID").(string)
+	if !ok {
+		userID = "unknown"
+	}
+
 	if req.Header.Get("Content-Type") != "application/json" {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -149,7 +159,7 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 
 	var responseModel model.JSONBatchResponse
 	for _, request := range requestModel {
-		shortened, _, errCreation := service.CreateShortURL(req.Context(), request.OriginalURL)
+		shortened, _, errCreation := service.CreateShortURL(req.Context(), request.OriginalURL, userID)
 		if errCreation != nil {
 			logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 		}
@@ -170,10 +180,53 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleUserListURL(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	userID, ok := req.Context().Value("userID").(string)
+	if !ok || userID == "" {
+		// Если кука присутствует, но не содержит ID пользователя - 401 Unauthorized
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Получаем URL пользователя из сервиса
+	urls, err := service.GetUserURLs(req.Context(), userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user URLs", zap.Error(err))
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// При отсутствии сокращённых URL - 204 No Content
+	if len(urls) == 0 {
+		res.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Преобразуем в требуемый формат ответа
+	response := make([]model.UserURLResponse, 0, len(urls))
+	for _, url := range urls {
+		response = append(response, model.UserURLResponse{
+			ShortURL:    formatShortenedURL(url.ShortURL),
+			OriginalURL: url.OriginalURL,
+		})
+	}
+
+	res.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(res).Encode(response); err != nil {
+		logger.Log.Error("Failed to encode user URLs", zap.Error(err))
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
 	r.Get("/ping", handlePing)
+	r.Get("/api/user/urls", handleUserListURL)
 	r.Post("/", handleCreateLink)
 	r.Post("/api/shorten", handleCreateLink)
 	r.Post("/api/shorten/batch", handleBatch)

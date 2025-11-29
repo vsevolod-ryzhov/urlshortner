@@ -11,6 +11,8 @@ var Options struct {
 	FlagLogLevel     string
 	StorageFilePath  string
 	DatabaseDSN      string
+	CookieSecret     string
+	Environment      string `env:"ENVIRONMENT" envDefault:"development"`
 }
 
 func ParseFlags() {
@@ -19,6 +21,7 @@ func ParseFlags() {
 	flag.StringVar(&Options.FlagLogLevel, "l", "info", "log level")
 	flag.StringVar(&Options.StorageFilePath, "f", "/tmp/shortenerStorage", "Path to the file where the shortened URLs will be stored")
 	flag.StringVar(&Options.DatabaseDSN, "d", "", "Database connection string")
+	flag.StringVar(&Options.CookieSecret, "c", "", "Cookie secret")
 
 	flag.Parse()
 
@@ -36,5 +39,16 @@ func ParseFlags() {
 	}
 	if databaseDSN := os.Getenv("DATABASE_DSN"); databaseDSN != "" {
 		Options.DatabaseDSN = databaseDSN
+	}
+	if cookieSecret := os.Getenv("COOKIE_SECRET"); cookieSecret != "" {
+		Options.CookieSecret = cookieSecret
+	}
+
+	if Options.CookieSecret == "" {
+		Options.CookieSecret = "JVaB8G2m7tu9XSzQjLU3Vxf5X4uU3apR"
+	}
+
+	if len(Options.CookieSecret) != 16 && len(Options.CookieSecret) != 24 && len(Options.CookieSecret) != 32 {
+		panic("COOKIE_SECRET must be 16, 24 or 32 bytes long")
 	}
 }

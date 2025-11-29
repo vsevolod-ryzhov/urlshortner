@@ -66,17 +66,17 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 }
 
 func (r *PostgresRepository) Save(record *model.ShortenedRecord) error {
-	query := `INSERT INTO links (id, short, original) 
-              VALUES ($1, $2, $3) 
+	query := `INSERT INTO links (id, short, original, user_id) 
+              VALUES ($1, $2, $3, $4) 
               ON CONFLICT (id) DO UPDATE SET short = $2, original = $3`
 
-	_, err := r.db.Exec(query, record.UUID, record.ShortURL, record.OriginalURL)
+	_, err := r.db.Exec(query, record.UUID, record.ShortURL, record.OriginalURL, record.UserID)
 	return err
 }
 
 func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, error) {
 	var record model.ShortenedRecord
-	query := `SELECT id, short, original FROM links WHERE id = $1`
+	query := `SELECT id, short, original, user_id FROM links WHERE id = $1`
 
 	err := r.db.QueryRow(query, uuid).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL)
 	if err == sql.ErrNoRows {
@@ -87,10 +87,14 @@ func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, err
 }
 
 func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
-	var record model.ShortenedRecord
-	query := `SELECT id, short, original FROM links WHERE short = $1`
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
-	err := r.db.QueryRowContext(ctx, query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL)
+	var record model.ShortenedRecord
+	query := `SELECT id, short, original, user_id FROM links WHERE short = $1`
+
+	err := r.db.QueryRowContext(ctx, query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrNotFound
 	}
@@ -101,7 +105,7 @@ func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string)
 func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) {
 	ret := make(map[string]model.ShortenedRecord)
 
-	query := `SELECT id, short, original FROM links`
+	query := `SELECT id, short, original, user_id FROM links`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -141,4 +145,31 @@ func (r *PostgresRepository) Close() error {
 
 func (r *PostgresRepository) GetData() map[string]model.ShortenedRecord {
 	return make(map[string]model.ShortenedRecord)
+}
+
+func (r *PostgresRepository) GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
+	ret := make(map[string]model.ShortenedRecord)
+
+	query := `SELECT id, short, original, user_id FROM links WHERE user_id = $1`
+	rows, err := r.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var record model.ShortenedRecord
+
+		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID); err != nil {
+			return nil, err
+		}
+
+		ret[record.ShortURL] = record
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
 }

@@ -35,7 +35,7 @@ func generateUUID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func CreateShortURL(ctx context.Context, url string) (string, bool, error) {
+func CreateShortURL(ctx context.Context, url string, userID string) (string, bool, error) {
 	shortID := generateShortID(url)
 
 	if Repo == nil {
@@ -63,6 +63,7 @@ func CreateShortURL(ctx context.Context, url string) (string, bool, error) {
 		UUID:        generateUUID(),
 		ShortURL:    shortID,
 		OriginalURL: url,
+		UserID:      userID,
 	}
 
 	urlStorage[shortID] = record
@@ -98,4 +99,20 @@ func generateShortID(originalURL string) string {
 	hash := sha256.Sum256([]byte(originalURL))
 	shortID := base64.URLEncoding.EncodeToString(hash[:8])
 	return strings.TrimRight(shortID, "=")
+}
+
+func GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
+	if Repo == nil {
+		return nil, nil
+	}
+
+	mutex.RLock()
+	data, err := Repo.GetUserURLs(ctx, userID)
+	mutex.RUnlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }

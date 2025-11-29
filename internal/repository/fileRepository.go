@@ -126,3 +126,15 @@ func (r *FileRepository) Close() error {
 func (r *FileRepository) GetData() map[string]model.ShortenedRecord {
 	return r.data
 }
+
+func (r *FileRepository) GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
+	ret := make(map[string]model.ShortenedRecord)
+
+	for _, record := range r.data {
+		if record.UserID == userID {
+			ret[record.ShortURL] = record
+		}
+	}
+
+	return ret, nil
+}

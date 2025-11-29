@@ -14,6 +14,8 @@ func setup() {
 		FlagLogLevel     string
 		StorageFilePath  string
 		DatabaseDSN      string
+		CookieSecret     string
+		Environment      string `env:"ENVIRONMENT" envDefault:"development"`
 	}{}
 }
 

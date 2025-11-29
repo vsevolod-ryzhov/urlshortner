@@ -1,0 +1,1 @@
+ALTER TABLE links ADD user_id VARCHAR(128);

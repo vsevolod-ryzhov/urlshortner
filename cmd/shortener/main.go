@@ -30,9 +30,17 @@ func main() {
 		service.InitRepo(repo)
 	}
 
+	handlerChain := logger.WithLogging(
+		handler.GzipMiddleware(
+			service.AuthMiddleware(
+				handler.MakeHandler(),
+			),
+		),
+	)
+
 	srv := &http.Server{
 		Addr:         config.Options.AppPort,
-		Handler:      logger.WithLogging(handler.GzipMiddleware(handler.MakeHandler())),
+		Handler:      handlerChain,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}

@@ -45,7 +45,7 @@ func TestRouter(t *testing.T) {
 	resp, get := testRequest(t, ts, "POST", "/", strings.NewReader(originalURL))
 	defer resp.Body.Close()
 	code := strings.TrimPrefix(get, "http://"+config.Options.ShortenedBaseURL+"/")
-	shortURL, _, _ := service.CreateShortURL(t.Context(), originalURL)
+	shortURL, _, _ := service.CreateShortURL(t.Context(), originalURL, "1")
 	assert.Equal(t, http.StatusCreated, resp.StatusCode)
 	assert.Equal(t, shortURL, code)
 
