@@ -112,7 +112,7 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	url, err := service.GetURL(id)
+	url, isDeleted, err := service.GetURL(id)
 	if err != nil {
 		if errors.Is(err, service.ErrNotFound) {
 			http.Error(res, "URL not found", http.StatusNotFound)
@@ -122,6 +122,10 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if isDeleted {
+		res.WriteHeader(http.StatusGone)
+		return
+	}
 	http.Redirect(res, req, url, http.StatusTemporaryRedirect)
 }
 
@@ -185,12 +189,10 @@ func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 
 	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok || userID == "" {
-		// Если кука присутствует, но не содержит ID пользователя - 401 Unauthorized
 		http.Error(res, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	// Получаем URL пользователя из сервиса
 	urls, err := service.GetUserURLs(req.Context(), userID)
 	if err != nil {
 		logger.Log.Error("Failed to get user URLs", zap.Error(err))
@@ -198,13 +200,11 @@ func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// При отсутствии сокращённых URL - 204 No Content
 	if len(urls) == 0 {
 		res.WriteHeader(http.StatusNoContent)
 		return
 	}
 
-	// Преобразуем в требуемый формат ответа
 	response := make([]model.UserURLResponse, 0, len(urls))
 	for _, url := range urls {
 		response = append(response, model.UserURLResponse{
@@ -222,6 +222,27 @@ func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok || userID == "" {
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var requestModel model.BatchDeleteRequest
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&requestModel); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		fmt.Println(err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	service.BatchDeleteURLs(userID, requestModel)
+
+	res.WriteHeader(http.StatusAccepted)
+}
+
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
@@ -230,6 +251,7 @@ func MakeHandler() *chi.Mux {
 	r.Post("/", handleCreateLink)
 	r.Post("/api/shorten", handleCreateLink)
 	r.Post("/api/shorten/batch", handleBatch)
+	r.Delete("/api/user/urls", handleDeleteURLs)
 
 	return r
 }

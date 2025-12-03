@@ -28,6 +28,7 @@ func main() {
 	if repo != nil {
 		defer repo.Close()
 		service.InitRepo(repo)
+		service.InitDeleteManager(repo, 3)
 	}
 
 	handlerChain := logger.WithLogging(

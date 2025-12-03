@@ -138,3 +138,15 @@ func (r *FileRepository) GetUserURLs(ctx context.Context, userID string) (map[st
 
 	return ret, nil
 }
+
+func (r *FileRepository) BatchDelete(ctx context.Context, userID string, shortIDs []string) error {
+	for _, item := range r.data {
+		for _, shortID := range shortIDs {
+			if item.ShortURL == shortID && item.UserID == userID {
+				item.IsDeleted = true
+			}
+		}
+	}
+
+	return nil
+}

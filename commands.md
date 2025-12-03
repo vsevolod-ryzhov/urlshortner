@@ -14,6 +14,7 @@
 12. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration12$ -binary-path=cmd/shortener/shortener -database-dsn="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable"
 13. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortener/shortener -database-dsn="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable"
 14. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration14$ -binary-path=cmd/shortener/shortener -database-dsn="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable"
+15. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration15$ -binary-path=cmd/shortener/shortener -database-dsn="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable"
 
 ## Misc
 - go build -o cmd/shortener/shortener cmd/shortener/*.go

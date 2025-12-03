@@ -76,9 +76,9 @@ func (r *PostgresRepository) Save(record *model.ShortenedRecord) error {
 
 func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, error) {
 	var record model.ShortenedRecord
-	query := `SELECT id, short, original, user_id FROM links WHERE id = $1`
+	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE id = $1`
 
-	err := r.db.QueryRow(query, uuid).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL)
+	err := r.db.QueryRow(query, uuid).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrNotFound
 	}
@@ -92,9 +92,9 @@ func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string)
 	}
 
 	var record model.ShortenedRecord
-	query := `SELECT id, short, original, user_id FROM links WHERE short = $1`
+	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE short = $1`
 
-	err := r.db.QueryRowContext(ctx, query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID)
+	err := r.db.QueryRowContext(ctx, query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrNotFound
 	}
@@ -105,7 +105,7 @@ func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string)
 func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) {
 	ret := make(map[string]model.ShortenedRecord)
 
-	query := `SELECT id, short, original, user_id FROM links`
+	query := `SELECT id, short, original, user_id, is_deleted FROM links`
 	rows, err := r.db.Query(query)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) 
 	for rows.Next() {
 		var record model.ShortenedRecord
 
-		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL); err != nil {
+		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.IsDeleted); err != nil {
 			return nil, err
 		}
 
@@ -150,7 +150,7 @@ func (r *PostgresRepository) GetData() map[string]model.ShortenedRecord {
 func (r *PostgresRepository) GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
 	ret := make(map[string]model.ShortenedRecord)
 
-	query := `SELECT id, short, original, user_id FROM links WHERE user_id = $1`
+	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE user_id = $1`
 	rows, err := r.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, err
@@ -160,7 +160,7 @@ func (r *PostgresRepository) GetUserURLs(ctx context.Context, userID string) (ma
 	for rows.Next() {
 		var record model.ShortenedRecord
 
-		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID); err != nil {
+		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted); err != nil {
 			return nil, err
 		}
 
@@ -172,4 +172,31 @@ func (r *PostgresRepository) GetUserURLs(ctx context.Context, userID string) (ma
 	}
 
 	return ret, nil
+}
+
+func (r *PostgresRepository) BatchDelete(ctx context.Context, userID string, shortIDs []string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, `
+        UPDATE links 
+        SET is_deleted = true
+        WHERE user_id = $1 
+          AND short = $2
+          AND is_deleted = false`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, shortID := range shortIDs {
+		if _, err := stmt.ExecContext(ctx, userID, shortID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }

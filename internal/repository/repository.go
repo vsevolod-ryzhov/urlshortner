@@ -15,4 +15,5 @@ type Repository interface {
 	Ping(ctx context.Context) error
 	Close() error
 	GetData() map[string]model.ShortenedRecord
+	BatchDelete(ctx context.Context, userID string, shortIDs []string) error
 }

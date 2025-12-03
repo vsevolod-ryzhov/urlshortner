@@ -1,0 +1,1 @@
+ALTER TABLE links ADD is_deleted BOOLEAN DEFAULT FALSE;

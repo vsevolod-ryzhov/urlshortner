@@ -15,10 +15,12 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("URL not found")
-	urlStorage  = make(map[string]model.ShortenedRecord)
-	mutex       sync.RWMutex
-	Repo        repository.Repository
+	ErrNotFound   = errors.New("URL not found")
+	urlStorage    = make(map[string]model.ShortenedRecord)
+	mutex         sync.RWMutex
+	Repo          repository.Repository
+	deleteManager *DeleteManager
+	initOnce      sync.Once
 )
 
 func InitRepo(r repository.Repository) error {
@@ -75,16 +77,31 @@ func CreateShortURL(ctx context.Context, url string, userID string) (string, boo
 	return shortID, false, nil
 }
 
-func GetURL(id string) (string, error) {
+func GetURL(id string) (string, bool, error) {
+	var exists bool
+	var record model.ShortenedRecord
 	mutex.RLock()
-	record, exists := urlStorage[id]
+	if Repo == nil {
+		record, exists = urlStorage[id]
+	} else {
+		var (
+			recordPnt *model.ShortenedRecord
+			err       error
+		)
+		recordPnt, err = Repo.GetByShortURL(context.Background(), id)
+		if err != nil {
+			return "", false, err
+		}
+		exists = true
+		record = *recordPnt
+	}
 	mutex.RUnlock()
 
 	if !exists {
-		return "", ErrNotFound
+		return "", false, ErrNotFound
 	}
 
-	return record.OriginalURL, nil
+	return record.OriginalURL, record.IsDeleted, nil
 }
 
 func generateShortID(originalURL string) string {
@@ -115,4 +132,10 @@ func GetUserURLs(ctx context.Context, userID string) (map[string]model.Shortened
 	}
 
 	return data, nil
+}
+
+func BatchDeleteURLs(userID string, shortIDs []model.BatchDeleteItem) {
+	for _, id := range shortIDs {
+		SubmitDeleteTask(userID, string(id))
+	}
 }
