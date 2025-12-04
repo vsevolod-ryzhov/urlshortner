@@ -25,22 +25,22 @@ func ParseFlags() {
 
 	flag.Parse()
 
-	if envRunAddr := os.Getenv("SERVER_ADDRESS"); envRunAddr != "" {
+	if envRunAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		Options.AppPort = envRunAddr
 	}
-	if envBaseURL := os.Getenv("BASE_URL"); envBaseURL != "" {
+	if envBaseURL, exists := os.LookupEnv("BASE_URL"); exists {
 		Options.ShortenedBaseURL = envBaseURL
 	}
-	if envLogLevel := os.Getenv("LOG_LEVEL"); envLogLevel != "" {
+	if envLogLevel, exists := os.LookupEnv("LOG_LEVEL"); exists {
 		Options.FlagLogLevel = envLogLevel
 	}
-	if storageFilePath := os.Getenv("FILE_STORAGE_PATH"); storageFilePath != "" {
+	if storageFilePath, exists := os.LookupEnv("FILE_STORAGE_PATH"); exists {
 		Options.StorageFilePath = storageFilePath
 	}
-	if databaseDSN := os.Getenv("DATABASE_DSN"); databaseDSN != "" {
+	if databaseDSN, exists := os.LookupEnv("DATABASE_DSN"); exists {
 		Options.DatabaseDSN = databaseDSN
 	}
-	if cookieSecret := os.Getenv("COOKIE_SECRET"); cookieSecret != "" {
+	if cookieSecret, exists := os.LookupEnv("COOKIE_SECRET"); exists {
 		Options.CookieSecret = cookieSecret
 	}
 

@@ -87,10 +87,6 @@ func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, err
 }
 
 func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
 	var record model.ShortenedRecord
 	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE short = $1`
 
@@ -186,7 +182,8 @@ func (r *PostgresRepository) BatchDelete(ctx context.Context, userID string, sho
         SET is_deleted = true
         WHERE user_id = $1 
           AND short = $2
-          AND is_deleted = false`)
+          AND is_deleted = false`,
+	)
 	if err != nil {
 		return err
 	}
