@@ -10,17 +10,16 @@ import (
 	"sync"
 	"time"
 
+	appErrors "github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 )
 
 var (
-	ErrNotFound   = errors.New("URL not found")
-	urlStorage    = make(map[string]model.ShortenedRecord)
-	mutex         sync.RWMutex
-	Repo          repository.Repository
-	deleteManager *DeleteManager
-	initOnce      sync.Once
+	ErrNotFound = errors.New("URL not found")
+	urlStorage  = make(map[string]model.ShortenedRecord)
+	mutex       sync.RWMutex
+	Repo        repository.Repository
 )
 
 func InitRepo(r repository.Repository) error {
@@ -77,7 +76,7 @@ func CreateShortURL(ctx context.Context, url string, userID string) (string, boo
 	return shortID, false, nil
 }
 
-func GetURL(id string) (string, bool, error) {
+func GetURL(id string) (string, error) {
 	var exists bool
 	var record model.ShortenedRecord
 	mutex.RLock()
@@ -90,7 +89,7 @@ func GetURL(id string) (string, bool, error) {
 		)
 		recordPnt, err = Repo.GetByShortURL(context.Background(), id)
 		if err != nil {
-			return "", false, err
+			return "", err
 		}
 		exists = true
 		record = *recordPnt
@@ -98,10 +97,14 @@ func GetURL(id string) (string, bool, error) {
 	mutex.RUnlock()
 
 	if !exists {
-		return "", false, ErrNotFound
+		return "", ErrNotFound
 	}
 
-	return record.OriginalURL, record.IsDeleted, nil
+	if record.IsDeleted {
+		return "", appErrors.ErrDeletedURL
+	}
+
+	return record.OriginalURL, nil
 }
 
 func generateShortID(originalURL string) string {

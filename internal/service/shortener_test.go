@@ -38,7 +38,7 @@ func TestCreateShortURLAndGet(t *testing.T) {
 				t.Errorf("generateShortID(%q) returns empty string", tt.args.url)
 			}
 
-			restored, _, err := GetURL(shortened)
+			restored, err := GetURL(shortened)
 
 			if err != nil {
 				t.Errorf("GetURL(%q) returns error: %v", shortened, err)

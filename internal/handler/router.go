@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	appErrors "github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
@@ -112,8 +113,13 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	url, isDeleted, err := service.GetURL(id)
+	url, err := service.GetURL(id)
 	if err != nil {
+		if errors.Is(err, appErrors.ErrDeletedURL) {
+			res.WriteHeader(http.StatusGone)
+			return
+		}
+
 		if errors.Is(err, service.ErrNotFound) {
 			http.Error(res, "URL not found", http.StatusNotFound)
 		} else {
@@ -122,10 +128,6 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if isDeleted {
-		res.WriteHeader(http.StatusGone)
-		return
-	}
 	http.Redirect(res, req, url, http.StatusTemporaryRedirect)
 }
 

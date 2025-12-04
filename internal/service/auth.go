@@ -41,6 +41,9 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie(cookieName); err == nil {
 			session, err := decodeAndVerifyCookie(cookie.Value)
+			if err != nil {
+				logger.Log.Debug("Cookie verifying error", zap.Error(err))
+			}
 			if err == nil && session.UserID != "" {
 				ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
 				next.ServeHTTP(w, r.WithContext(ctx))
@@ -99,19 +102,16 @@ func encodeAndSignCookie(session *UserSession) (string, error) {
 func decodeAndVerifyCookie(cookieValue string) (*UserSession, error) {
 	encrypted, err := base64.URLEncoding.DecodeString(cookieValue)
 	if err != nil {
-		logger.Log.Debug("Failed to decode base64", zap.Error(err))
 		return nil, ErrInvalidCookie
 	}
 
 	decrypted, err := decrypt(encrypted)
 	if err != nil {
-		logger.Log.Debug("Failed to decrypt", zap.Error(err))
 		return nil, ErrInvalidCookie
 	}
 
 	parts := strings.Split(string(decrypted), "|")
 	if len(parts) != 2 {
-		logger.Log.Debug("Invalid cookie format", zap.String("data", string(decrypted)))
 		return nil, ErrInvalidCookie
 	}
 
@@ -120,12 +120,10 @@ func decodeAndVerifyCookie(cookieValue string) (*UserSession, error) {
 
 	createdAt, err := strconv.ParseInt(createdAtStr, 10, 64)
 	if err != nil {
-		logger.Log.Debug("Invalid timestamp in cookie", zap.Error(err))
 		return nil, ErrInvalidCookie
 	}
 
 	if userID == "" {
-		logger.Log.Debug("Empty userID in cookie")
 		return nil, ErrInvalidCookie
 	}
 
