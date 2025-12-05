@@ -11,7 +11,9 @@ type Repository interface {
 	GetByUUID(uuid string) (*model.ShortenedRecord, error)
 	GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error)
 	GetAll() (map[string]model.ShortenedRecord, error)
+	GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error)
 	Ping(ctx context.Context) error
 	Close() error
 	GetData() map[string]model.ShortenedRecord
+	BatchDelete(ctx context.Context, userID string, shortIDs []string) error
 }

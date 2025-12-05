@@ -28,11 +28,20 @@ func main() {
 	if repo != nil {
 		defer repo.Close()
 		service.InitRepo(repo)
+		service.InitDeleteManager(repo, 3)
 	}
+
+	handlerChain := logger.WithLogging(
+		handler.GzipMiddleware(
+			service.AuthMiddleware(
+				handler.MakeHandler(),
+			),
+		),
+	)
 
 	srv := &http.Server{
 		Addr:         config.Options.AppPort,
-		Handler:      logger.WithLogging(handler.GzipMiddleware(handler.MakeHandler())),
+		Handler:      handlerChain,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}

@@ -126,3 +126,48 @@ func (r *FileRepository) Close() error {
 func (r *FileRepository) GetData() map[string]model.ShortenedRecord {
 	return r.data
 }
+
+func (r *FileRepository) GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
+	ret := make(map[string]model.ShortenedRecord)
+
+	for _, record := range r.data {
+		if record.UserID == userID {
+			ret[record.ShortURL] = record
+		}
+	}
+
+	return ret, nil
+}
+
+func (r *FileRepository) BatchDelete(ctx context.Context, userID string, shortIDs []string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if len(shortIDs) == 0 {
+		return nil
+	}
+
+	var recordsToSave []model.ShortenedRecord
+
+	for _, shortID := range shortIDs {
+		record, exists := r.data[shortID]
+		if !exists {
+			continue
+		}
+
+		if record.UserID == userID && !record.IsDeleted {
+			record.IsDeleted = true
+			r.data[shortID] = record
+
+			recordsToSave = append(recordsToSave, record)
+		}
+	}
+
+	for _, record := range recordsToSave {
+		if err := r.saveToFile(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

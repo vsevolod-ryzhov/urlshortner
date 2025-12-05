@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	appErrors "github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
@@ -81,6 +82,11 @@ func formatShortenedURL(shortenedURL string) string {
 }
 
 func handleCreateLink(res http.ResponseWriter, req *http.Request) {
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok {
+		userID = "unknown"
+	}
+
 	var body []byte
 	var err error
 
@@ -91,7 +97,7 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	url := string(body)
 
-	shortened, alreadyExists, errCreation := service.CreateShortURL(req.Context(), url)
+	shortened, alreadyExists, errCreation := service.CreateShortURL(req.Context(), url, userID)
 	if errCreation != nil {
 		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 	}
@@ -109,6 +115,11 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 
 	url, err := service.GetURL(id)
 	if err != nil {
+		if errors.Is(err, appErrors.ErrDeletedURL) {
+			res.WriteHeader(http.StatusGone)
+			return
+		}
+
 		if errors.Is(err, service.ErrNotFound) {
 			http.Error(res, "URL not found", http.StatusNotFound)
 		} else {
@@ -133,6 +144,11 @@ func handlePing(res http.ResponseWriter, req *http.Request) {
 }
 
 func handleBatch(res http.ResponseWriter, req *http.Request) {
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok {
+		userID = "unknown"
+	}
+
 	if req.Header.Get("Content-Type") != "application/json" {
 		res.WriteHeader(http.StatusBadRequest)
 		return
@@ -149,7 +165,7 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 
 	var responseModel model.JSONBatchResponse
 	for _, request := range requestModel {
-		shortened, _, errCreation := service.CreateShortURL(req.Context(), request.OriginalURL)
+		shortened, _, errCreation := service.CreateShortURL(req.Context(), request.OriginalURL, userID)
 		if errCreation != nil {
 			logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
 		}
@@ -170,13 +186,74 @@ func handleBatch(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleUserListURL(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok || userID == "" {
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	urls, err := service.GetUserURLs(req.Context(), userID)
+	if err != nil {
+		logger.Log.Error("Failed to get user URLs", zap.Error(err))
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if len(urls) == 0 {
+		res.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	response := make([]model.UserURLResponse, 0, len(urls))
+	for _, url := range urls {
+		response = append(response, model.UserURLResponse{
+			ShortURL:    formatShortenedURL(url.ShortURL),
+			OriginalURL: url.OriginalURL,
+		})
+	}
+
+	res.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(res).Encode(response); err != nil {
+		logger.Log.Error("Failed to encode user URLs", zap.Error(err))
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok || userID == "" {
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var requestModel model.BatchDeleteRequest
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&requestModel); err != nil {
+		logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
+		fmt.Println(err)
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	service.BatchDeleteURLs(userID, requestModel)
+
+	res.WriteHeader(http.StatusAccepted)
+}
+
 func MakeHandler() *chi.Mux {
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
 	r.Get("/ping", handlePing)
+	r.Get("/api/user/urls", handleUserListURL)
 	r.Post("/", handleCreateLink)
 	r.Post("/api/shorten", handleCreateLink)
 	r.Post("/api/shorten/batch", handleBatch)
+	r.Delete("/api/user/urls", handleDeleteURLs)
 
 	return r
 }

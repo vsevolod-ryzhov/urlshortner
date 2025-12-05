@@ -1,0 +1,4 @@
+# .coverignore
+
+internal/errors/errors.go
+internal/model/*.go

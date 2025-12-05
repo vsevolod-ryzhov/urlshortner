@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	appErrors "github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 )
@@ -35,7 +36,7 @@ func generateUUID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
-func CreateShortURL(ctx context.Context, url string) (string, bool, error) {
+func CreateShortURL(ctx context.Context, url string, userID string) (string, bool, error) {
 	shortID := generateShortID(url)
 
 	if Repo == nil {
@@ -63,6 +64,7 @@ func CreateShortURL(ctx context.Context, url string) (string, bool, error) {
 		UUID:        generateUUID(),
 		ShortURL:    shortID,
 		OriginalURL: url,
+		UserID:      userID,
 	}
 
 	urlStorage[shortID] = record
@@ -75,12 +77,31 @@ func CreateShortURL(ctx context.Context, url string) (string, bool, error) {
 }
 
 func GetURL(id string) (string, error) {
+	var exists bool
+	var record model.ShortenedRecord
 	mutex.RLock()
-	record, exists := urlStorage[id]
+	if Repo == nil {
+		record, exists = urlStorage[id]
+	} else {
+		var (
+			recordPnt *model.ShortenedRecord
+			err       error
+		)
+		recordPnt, err = Repo.GetByShortURL(context.Background(), id)
+		if err != nil {
+			return "", err
+		}
+		exists = true
+		record = *recordPnt
+	}
 	mutex.RUnlock()
 
 	if !exists {
 		return "", ErrNotFound
+	}
+
+	if record.IsDeleted {
+		return "", appErrors.ErrDeletedURL
 	}
 
 	return record.OriginalURL, nil
@@ -98,4 +119,26 @@ func generateShortID(originalURL string) string {
 	hash := sha256.Sum256([]byte(originalURL))
 	shortID := base64.URLEncoding.EncodeToString(hash[:8])
 	return strings.TrimRight(shortID, "=")
+}
+
+func GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
+	if Repo == nil {
+		return nil, nil
+	}
+
+	mutex.RLock()
+	data, err := Repo.GetUserURLs(ctx, userID)
+	mutex.RUnlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func BatchDeleteURLs(userID string, shortIDs []model.BatchDeleteItem) {
+	for _, id := range shortIDs {
+		SubmitDeleteTask(userID, string(id))
+	}
 }
