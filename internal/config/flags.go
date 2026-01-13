@@ -13,6 +13,8 @@ var Options struct {
 	DatabaseDSN      string
 	CookieSecret     string
 	Environment      string `env:"ENVIRONMENT" envDefault:"development"`
+	AuditFilePath    string
+	AuditURL         string
 }
 
 func ParseFlags() {
@@ -22,6 +24,8 @@ func ParseFlags() {
 	flag.StringVar(&Options.StorageFilePath, "f", "/tmp/shortenerStorage", "Path to the file where the shortened URLs will be stored")
 	flag.StringVar(&Options.DatabaseDSN, "d", "", "Database connection string")
 	flag.StringVar(&Options.CookieSecret, "c", "", "Cookie secret")
+	flag.StringVar(&Options.AuditFilePath, "audit-file", "", "Audit file path")
+	flag.StringVar(&Options.AuditURL, "audit-url", "", "Audit URL")
 
 	flag.Parse()
 
@@ -42,6 +46,12 @@ func ParseFlags() {
 	}
 	if cookieSecret, exists := os.LookupEnv("COOKIE_SECRET"); exists {
 		Options.CookieSecret = cookieSecret
+	}
+	if auditFilePath, exists := os.LookupEnv("AUDIT_FILE"); exists {
+		Options.AuditFilePath = auditFilePath
+	}
+	if auditURL, exists := os.LookupEnv("AUDIT_URL"); exists {
+		Options.AuditURL = auditURL
 	}
 
 	if Options.CookieSecret == "" {

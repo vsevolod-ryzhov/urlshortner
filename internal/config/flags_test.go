@@ -16,6 +16,8 @@ func setup() {
 		DatabaseDSN      string
 		CookieSecret     string
 		Environment      string `env:"ENVIRONMENT" envDefault:"development"`
+		AuditFilePath    string
+		AuditURL         string
 	}{}
 }
 

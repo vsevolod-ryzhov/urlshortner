@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	appErrors "github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
@@ -18,6 +19,8 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
 )
+
+var publisher *audit.AuditMessenger
 
 func getStatusCode(alreadyExists bool) int {
 	if !alreadyExists {
@@ -103,6 +106,16 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	sendCreateLinkResponse(res, req, formatShortenedURL(shortened), alreadyExists)
+
+	message := audit.AuditMessage{
+		Data: map[string]interface{}{
+			"ts":      time.Now(),
+			"action":  "shorten",
+			"user_id": userID,
+			"url":     url,
+		},
+	}
+	publisher.Audit(message)
 }
 
 func handleGetLink(res http.ResponseWriter, req *http.Request) {
@@ -245,7 +258,8 @@ func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusAccepted)
 }
 
-func MakeHandler() *chi.Mux {
+func MakeHandler(p *audit.AuditMessenger) *chi.Mux {
+	publisher = p
 	r := chi.NewRouter()
 	r.Get("/{link}", handleGetLink)
 	r.Get("/ping", handlePing)

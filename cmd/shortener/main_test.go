@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
@@ -38,7 +39,7 @@ func TestRouter(t *testing.T) {
 		panic(repoErr)
 	}
 	service.InitRepo(repo)
-	ts := httptest.NewServer(handler.MakeHandler())
+	ts := httptest.NewServer(handler.MakeHandler(&audit.AuditMessenger{}))
 	defer ts.Close()
 	originalURL := "https://ya.ru/"
 
