@@ -22,7 +22,7 @@ func main() {
 		panic(err)
 	}
 
-	auditObserver := &audit.AuditMessenger{}
+	auditObserver := audit.NewAuditMessenger()
 
 	if config.Options.AuditFilePath != "" {
 		auditObserver.RegisterObserver(&audit.FileObserver{

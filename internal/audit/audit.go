@@ -28,13 +28,28 @@ type AuditMessenger struct {
 	mu        sync.RWMutex
 }
 
+func NewAuditMessenger() *AuditMessenger {
+	return &AuditMessenger{
+		observers: make([]Observer, 0),
+		mu:        sync.RWMutex{},
+	}
+}
+
 func (a *AuditMessenger) RegisterObserver(o Observer) {
+	if a == nil {
+		return
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.observers = append(a.observers, o)
 }
 
 func (a *AuditMessenger) RemoveObserver(o Observer) {
+	if a == nil {
+		return
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	for i, observer := range a.observers {
@@ -46,6 +61,10 @@ func (a *AuditMessenger) RemoveObserver(o Observer) {
 }
 
 func (a *AuditMessenger) NotifyObservers() {
+	if a == nil || len(a.observers) == 0 {
+		return
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	for _, observer := range a.observers {
@@ -54,6 +73,10 @@ func (a *AuditMessenger) NotifyObservers() {
 }
 
 func (a *AuditMessenger) Audit(message AuditMessage) {
+	if a == nil {
+		return
+	}
+
 	a.message = message
 	a.NotifyObservers()
 }
