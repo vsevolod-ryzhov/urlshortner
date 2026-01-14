@@ -141,6 +141,21 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok {
+		userID = "unknown"
+	}
+
+	message := audit.AuditMessage{
+		Data: map[string]interface{}{
+			"ts":      time.Now(),
+			"action":  "follow",
+			"user_id": userID,
+			"url":     url,
+		},
+	}
+	publisher.Audit(message)
+
 	http.Redirect(res, req, url, http.StatusTemporaryRedirect)
 }
 

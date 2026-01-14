@@ -2,9 +2,11 @@ package audit
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"net/http"
 	"os"
+	"sync"
 )
 
 type AuditMessage struct {
@@ -23,13 +25,18 @@ type Observer interface {
 type AuditMessenger struct {
 	observers []Observer
 	message   AuditMessage
+	mu        sync.RWMutex
 }
 
 func (a *AuditMessenger) RegisterObserver(o Observer) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.observers = append(a.observers, o)
 }
 
 func (a *AuditMessenger) RemoveObserver(o Observer) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	for i, observer := range a.observers {
 		if observer == o {
 			a.observers = append(a.observers[:i], a.observers[i+1:]...)
@@ -39,8 +46,10 @@ func (a *AuditMessenger) RemoveObserver(o Observer) {
 }
 
 func (a *AuditMessenger) NotifyObservers() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	for _, observer := range a.observers {
-		observer.Update(a.message)
+		go observer.Update(a.message)
 	}
 }
 
@@ -74,6 +83,21 @@ type HTTPObserver struct {
 }
 
 func (h *HTTPObserver) Update(message AuditMessage) {
-	/// TODO: implement HTTP request here
-	fmt.Println("HTTP observer output", message.Data)
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		return
+	}
+
+	req, err := http.NewRequest("POST", h.URL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
 }
