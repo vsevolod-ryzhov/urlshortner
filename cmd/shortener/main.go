@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
@@ -53,6 +55,13 @@ func main() {
 			),
 		),
 	)
+
+	go func() {
+		logger.Log.Info("Starting pprof server on :6060")
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			logger.Log.Error("Pprof server failed", zap.Error(err))
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:         config.Options.AppPort,
