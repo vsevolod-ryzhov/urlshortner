@@ -65,11 +65,21 @@ func (a *AuditMessenger) NotifyObservers() {
 		return
 	}
 
-	a.mu.Lock()
-	defer a.mu.Unlock()
+	a.mu.RLock()
+	message := a.message
+
+	var wg sync.WaitGroup
+	wg.Add(len(a.observers))
+
 	for _, observer := range a.observers {
-		go observer.Update(a.message)
+		go func(o Observer) {
+			defer wg.Done()
+			o.Update(message)
+		}(observer)
 	}
+
+	a.mu.RUnlock()
+	wg.Wait()
 }
 
 func (a *AuditMessenger) Audit(message AuditMessage) {
