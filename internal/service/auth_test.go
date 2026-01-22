@@ -52,8 +52,9 @@ func TestAuthMiddleware_NewSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, "OK", rr.Body.String())
 
-	cookies := rr.Result().Cookies()
-	defer rr.Result().Body.Close()
+	result := rr.Result()
+	defer result.Body.Close()
+	cookies := result.Cookies()
 	require.Len(t, cookies, 1, "Should set one cookie")
 
 	cookie := cookies[0]
@@ -251,8 +252,9 @@ func TestCookieAttributes(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	cookies := rr.Result().Cookies()
-	defer rr.Result().Body.Close()
+	result := rr.Result()
+	defer result.Body.Close()
+	cookies := result.Cookies()
 	require.Len(t, cookies, 1)
 
 	cookie := cookies[0]
@@ -284,8 +286,10 @@ func TestAuthMiddleware_ProductionEnvironment(t *testing.T) {
 
 	handler.ServeHTTP(rr, req)
 
-	cookies := rr.Result().Cookies()
-	defer rr.Result().Body.Close()
+	result := rr.Result()
+	defer result.Body.Close()
+	cookies := result.Cookies()
+
 	require.Len(t, cookies, 1)
 	assert.True(t, cookies[0].Secure, "Cookie should be Secure in production")
 }
@@ -314,8 +318,10 @@ func TestConcurrentSessions(t *testing.T) {
 
 			handler.ServeHTTP(rr, req)
 
-			cookies := rr.Result().Cookies()
-			defer rr.Result().Body.Close()
+			result := rr.Result()
+			defer result.Body.Close()
+			cookies := result.Cookies()
+
 			if len(cookies) > 0 {
 				cookie := cookies[0]
 				session, err := decodeAndVerifyCookie(cookie.Value)
@@ -464,8 +470,10 @@ func TestAuthMiddleware_MissingCookieName(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, rr.Code)
 
-	cookies := rr.Result().Cookies()
-	defer rr.Result().Body.Close()
+	result := rr.Result()
+	defer result.Body.Close()
+	cookies := result.Cookies()
+
 	require.Len(t, cookies, 1)
 	assert.Equal(t, cookieName, cookies[0].Name)
 }
