@@ -105,7 +105,9 @@ func TestAuthMiddleware_ExistingSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 	assert.Equal(t, expectedUserID, capturedUserID)
 
-	cookies := rr.Result().Cookies()
+	result := rr.Result()
+	defer result.Body.Close()
+	cookies := result.Cookies()
 	assert.Len(t, cookies, 0, "Should not set new cookie for existing session")
 }
 
