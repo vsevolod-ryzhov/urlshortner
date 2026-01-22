@@ -40,16 +40,6 @@ func (r *FileRepository) Save(record *model.ShortenedRecord) error {
 	return r.saveToFile(*record)
 }
 
-func (r *FileRepository) GetByUUID(uuid string) (*model.ShortenedRecord, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	if record, exists := r.data[uuid]; exists {
-		return &record, nil
-	}
-	return nil, errors.ErrNotFound
-}
-
 func (r *FileRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

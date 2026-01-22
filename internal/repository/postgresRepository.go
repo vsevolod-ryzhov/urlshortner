@@ -74,18 +74,6 @@ func (r *PostgresRepository) Save(record *model.ShortenedRecord) error {
 	return err
 }
 
-func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, error) {
-	var record model.ShortenedRecord
-	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE id = $1`
-
-	err := r.db.QueryRow(query, uuid).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted)
-	if err == sql.ErrNoRows {
-		return nil, errors.ErrNotFound
-	}
-
-	return &record, err
-}
-
 func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
 	var record model.ShortenedRecord
 	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE short = $1`
