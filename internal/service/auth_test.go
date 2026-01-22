@@ -16,6 +16,12 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 )
 
+type additionalContextKey string
+
+const (
+	additionalKey additionalContextKey = "additionalKey"
+)
+
 func setupTestConfig() {
 	config.Options.CookieSecret = "JVaB8G2m7tu9XSzQjLU3Vxf5X4uU3apR"
 	config.Options.Environment = "development"
@@ -405,7 +411,7 @@ func TestContextPropagation(t *testing.T) {
 
 	valueAddingMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := context.WithValue(r.Context(), "additionalKey", "additionalValue")
+			ctx := context.WithValue(r.Context(), additionalKey, "additionalValue")
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -415,7 +421,7 @@ func TestContextPropagation(t *testing.T) {
 		assert.True(t, ok)
 		assert.NotEmpty(t, userID)
 
-		additionalValue, ok := r.Context().Value("additionalKey").(string)
+		additionalValue, ok := r.Context().Value(additionalKey).(string)
 		assert.True(t, ok)
 		assert.Equal(t, "additionalValue", additionalValue)
 
