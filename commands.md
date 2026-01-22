@@ -33,3 +33,4 @@
 - migrate -database "postgres://postgres_user:postgres_password@localhost:5432/postgres_db?sslmode=disable" -path ./migrations up
 - curl -o profiles/base.pprof http://localhost:6060/debug/pprof/heap
 - go tool pprof -http=":9090" profiles/base.pprof
+- go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out | grep total
