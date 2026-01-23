@@ -1,3 +1,4 @@
+// Main entrypoint of Shortener app
 package main
 
 import (

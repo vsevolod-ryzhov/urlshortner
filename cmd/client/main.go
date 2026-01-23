@@ -1,3 +1,4 @@
+// Simple client used for testing main app
 package main
 
 import (

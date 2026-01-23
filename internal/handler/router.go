@@ -1,3 +1,4 @@
+// Package handler used for handling all incoming API requests
 package handler
 
 import (
@@ -273,6 +274,7 @@ func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusAccepted)
 }
 
+// MakeHandler registers all available API endpoints
 func MakeHandler(p *audit.AuditMessenger) *chi.Mux {
 	publisher = p
 	r := chi.NewRouter()

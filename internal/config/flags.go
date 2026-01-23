@@ -1,3 +1,4 @@
+// Package config used for initialization and storing all available parameters in app
 package config
 
 import (
@@ -6,17 +7,18 @@ import (
 )
 
 var Options struct {
-	AppPort          string
-	ShortenedBaseURL string
-	FlagLogLevel     string
-	StorageFilePath  string
-	DatabaseDSN      string
-	CookieSecret     string
-	Environment      string `env:"ENVIRONMENT" envDefault:"development"`
-	AuditFilePath    string
-	AuditURL         string
+	AppPort          string // Application address and port
+	ShortenedBaseURL string // Base URL used for shortened version
+	FlagLogLevel     string // Log level of built-in logger
+	StorageFilePath  string // Path to file where all shortened links will be stored
+	DatabaseDSN      string // Database connection string
+	CookieSecret     string // 32 bytes secret
+	Environment      string `env:"ENVIRONMENT" envDefault:"development"` // Application environment
+	AuditFilePath    string // Path to audit file where app logs will be stored
+	AuditURL         string // URL for audit service where app logs will be sent
 }
 
+// ParseFlags func reads startup arguments and env variables
 func ParseFlags() {
 	flag.StringVar(&Options.AppPort, "a", "localhost:8080", "The address to bind the app to")
 	flag.StringVar(&Options.ShortenedBaseURL, "b", "localhost:8080", "The base url of shortened")
