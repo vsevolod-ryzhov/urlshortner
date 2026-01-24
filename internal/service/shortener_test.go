@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -109,4 +111,20 @@ func base64Save(str string) bool {
 		}
 	}
 	return true
+}
+
+func ExampleCreateShortURL() {
+	shortened1, _, _ := CreateShortURL(context.Background(), "https://ya.ru", "1")
+	fmt.Println(shortened1)
+
+	shortened2, _, _ := CreateShortURL(context.Background(), "https://ya.com", "1")
+	fmt.Println(shortened2)
+
+	shortened3, _, _ := CreateShortURL(context.Background(), "https://ya.net", "1")
+	fmt.Println(shortened3)
+
+	// Output:
+	// fpCk-cMLTn4
+	// ZOiLcK9R_6I
+	// gUbMZ5KfCnQ
 }
