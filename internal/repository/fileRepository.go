@@ -19,6 +19,7 @@ type FileRepository struct {
 	data     map[string]model.ShortenedRecord
 }
 
+// NewFileRepository creates new FileRepository object and reads all stored data from file located in filePath.
 func NewFileRepository(filePath string) (*FileRepository, error) {
 	repo := &FileRepository{
 		filePath: filePath,
@@ -32,6 +33,7 @@ func NewFileRepository(filePath string) (*FileRepository, error) {
 	return repo, nil
 }
 
+// Save func append new record to file.
 func (r *FileRepository) Save(record *model.ShortenedRecord) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -40,6 +42,7 @@ func (r *FileRepository) Save(record *model.ShortenedRecord) error {
 	return r.saveToFile(*record)
 }
 
+// GetByShortURL looks for an record by short URL, returns pointer to record or error ErrNotFound if record is not found.
 func (r *FileRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -52,6 +55,7 @@ func (r *FileRepository) GetByShortURL(ctx context.Context, shortURL string) (*m
 	return nil, errors.ErrNotFound
 }
 
+// GetAll returns all store records.
 func (r *FileRepository) GetAll() (map[string]model.ShortenedRecord, error) {
 	return r.data, nil
 }
@@ -117,6 +121,7 @@ func (r *FileRepository) GetData() map[string]model.ShortenedRecord {
 	return r.data
 }
 
+// GetUserURLs returns all records made by specified user.
 func (r *FileRepository) GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
 	ret := make(map[string]model.ShortenedRecord)
 
@@ -129,6 +134,7 @@ func (r *FileRepository) GetUserURLs(ctx context.Context, userID string) (map[st
 	return ret, nil
 }
 
+// BatchDelete removes multiple records by passed short ID map for specified user.
 func (r *FileRepository) BatchDelete(ctx context.Context, userID string, shortIDs []string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
