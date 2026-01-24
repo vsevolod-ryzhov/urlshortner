@@ -37,6 +37,7 @@ type UserSession struct {
 	CreatedAt time.Time
 }
 
+// AuthMiddleware creates new middleware used for user authentication
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie(cookieName); err == nil {
