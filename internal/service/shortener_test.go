@@ -128,3 +128,22 @@ func ExampleCreateShortURL() {
 	// ZOiLcK9R_6I
 	// gUbMZ5KfCnQ
 }
+
+func ExampleGetURL() {
+	shortened1, _, _ := CreateShortURL(context.Background(), "https://ya.ru", "1")
+	originalURL1, _ := GetURL(shortened1)
+	fmt.Println(originalURL1)
+
+	shortened2, _, _ := CreateShortURL(context.Background(), "https://ya.com", "1")
+	originalURL2, _ := GetURL(shortened2)
+	fmt.Println(originalURL2)
+
+	shortened3, _, _ := CreateShortURL(context.Background(), "https://ya.net", "1")
+	originalURL3, _ := GetURL(shortened3)
+	fmt.Println(originalURL3)
+
+	// Output:
+	// https://ya.ru
+	// https://ya.com
+	// https://ya.net
+}
