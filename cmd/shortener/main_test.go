@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
@@ -33,12 +34,13 @@ func testRequest(t *testing.T, ts *httptest.Server, method string, path string, 
 func TestRouter(t *testing.T) {
 	config.ParseFlags()
 	os.Remove(config.Options.StorageFilePath)
+	auditObserver := audit.NewAuditMessenger()
 	repo, repoErr := repository.NewRepository()
 	if repoErr != nil {
 		panic(repoErr)
 	}
 	service.InitRepo(repo)
-	ts := httptest.NewServer(handler.MakeHandler())
+	ts := httptest.NewServer(handler.MakeHandler(auditObserver))
 	defer ts.Close()
 	originalURL := "https://ya.ru/"
 

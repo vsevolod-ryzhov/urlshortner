@@ -1,6 +1,8 @@
 package service
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -109,4 +111,39 @@ func base64Save(str string) bool {
 		}
 	}
 	return true
+}
+
+func ExampleCreateShortURL() {
+	shortened1, _, _ := CreateShortURL(context.Background(), "https://ya.ru", "1")
+	fmt.Println(shortened1)
+
+	shortened2, _, _ := CreateShortURL(context.Background(), "https://ya.com", "1")
+	fmt.Println(shortened2)
+
+	shortened3, _, _ := CreateShortURL(context.Background(), "https://ya.net", "1")
+	fmt.Println(shortened3)
+
+	// Output:
+	// fpCk-cMLTn4
+	// ZOiLcK9R_6I
+	// gUbMZ5KfCnQ
+}
+
+func ExampleGetURL() {
+	shortened1, _, _ := CreateShortURL(context.Background(), "https://ya.ru", "1")
+	originalURL1, _ := GetURL(shortened1)
+	fmt.Println(originalURL1)
+
+	shortened2, _, _ := CreateShortURL(context.Background(), "https://ya.com", "1")
+	originalURL2, _ := GetURL(shortened2)
+	fmt.Println(originalURL2)
+
+	shortened3, _, _ := CreateShortURL(context.Background(), "https://ya.net", "1")
+	originalURL3, _ := GetURL(shortened3)
+	fmt.Println(originalURL3)
+
+	// Output:
+	// https://ya.ru
+	// https://ya.com
+	// https://ya.net
 }

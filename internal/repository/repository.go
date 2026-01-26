@@ -8,7 +8,6 @@ import (
 
 type Repository interface {
 	Save(record *model.ShortenedRecord) error
-	GetByUUID(uuid string) (*model.ShortenedRecord, error)
 	GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error)
 	GetAll() (map[string]model.ShortenedRecord, error)
 	GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error)

@@ -36,6 +36,7 @@ func generateUUID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
 }
 
+// CreateShortURL creates shortened version of specified URL and stores it in storage which is based on app startup settings.
 func CreateShortURL(ctx context.Context, url string, userID string) (string, bool, error) {
 	shortID := generateShortID(url)
 
@@ -76,6 +77,7 @@ func CreateShortURL(ctx context.Context, url string, userID string) (string, boo
 	return shortID, false, nil
 }
 
+// GetURL returns original URL by shortened version.
 func GetURL(id string) (string, error) {
 	var exists bool
 	var record model.ShortenedRecord
@@ -121,6 +123,7 @@ func generateShortID(originalURL string) string {
 	return strings.TrimRight(shortID, "=")
 }
 
+// GetUserURLs returns all records made by specified user.
 func GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
 	if Repo == nil {
 		return nil, nil
@@ -137,6 +140,7 @@ func GetUserURLs(ctx context.Context, userID string) (map[string]model.Shortened
 	return data, nil
 }
 
+// BatchDeleteURLs submit bath delete tasks.
 func BatchDeleteURLs(userID string, shortIDs []model.BatchDeleteItem) {
 	for _, id := range shortIDs {
 		SubmitDeleteTask(userID, string(id))

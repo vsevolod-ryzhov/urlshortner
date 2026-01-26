@@ -1,10 +1,14 @@
+// Main entrypoint of Shortener app
 package main
 
 import (
 	"net/http"
 	"time"
 
+	_ "net/http/pprof"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
@@ -21,6 +25,20 @@ func main() {
 		panic(err)
 	}
 
+	auditObserver := audit.NewAuditMessenger()
+
+	if config.Options.AuditFilePath != "" {
+		auditObserver.RegisterObserver(&audit.FileObserver{
+			FilePath: config.Options.AuditFilePath,
+		})
+	}
+
+	if config.Options.AuditURL != "" {
+		auditObserver.RegisterObserver(&audit.HTTPObserver{
+			URL: config.Options.AuditURL,
+		})
+	}
+
 	repo, repoErr := repository.NewRepository()
 	if repoErr != nil {
 		logger.Log.Fatal("Failed to create repository", zap.Error(repoErr))
@@ -34,10 +52,17 @@ func main() {
 	handlerChain := logger.WithLogging(
 		handler.GzipMiddleware(
 			service.AuthMiddleware(
-				handler.MakeHandler(),
+				handler.MakeHandler(auditObserver),
 			),
 		),
 	)
+
+	go func() {
+		logger.Log.Info("Starting pprof server on :6060")
+		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+			logger.Log.Error("Pprof server failed", zap.Error(err))
+		}
+	}()
 
 	srv := &http.Server{
 		Addr:         config.Options.AppPort,

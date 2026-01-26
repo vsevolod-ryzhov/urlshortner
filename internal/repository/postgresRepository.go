@@ -40,6 +40,7 @@ func applyMigrations(db *sql.DB) error {
 	return nil
 }
 
+// NewPostgresRepository creates new and applies migrations.
 func NewPostgresRepository(connectionString string) (*PostgresRepository, error) {
 	db, err := sql.Open("pgx", connectionString)
 	if err != nil {
@@ -65,6 +66,7 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 	return &PostgresRepository{db: db}, nil
 }
 
+// Save inserts new record to links table.
 func (r *PostgresRepository) Save(record *model.ShortenedRecord) error {
 	query := `INSERT INTO links (id, short, original, user_id) 
               VALUES ($1, $2, $3, $4) 
@@ -74,18 +76,7 @@ func (r *PostgresRepository) Save(record *model.ShortenedRecord) error {
 	return err
 }
 
-func (r *PostgresRepository) GetByUUID(uuid string) (*model.ShortenedRecord, error) {
-	var record model.ShortenedRecord
-	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE id = $1`
-
-	err := r.db.QueryRow(query, uuid).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted)
-	if err == sql.ErrNoRows {
-		return nil, errors.ErrNotFound
-	}
-
-	return &record, err
-}
-
+// GetByShortURL looks for an existing record in links table
 func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string) (*model.ShortenedRecord, error) {
 	var record model.ShortenedRecord
 	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE short = $1`
@@ -98,6 +89,7 @@ func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string)
 	return &record, err
 }
 
+// GetAll returns all records from links table.
 func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) {
 	ret := make(map[string]model.ShortenedRecord)
 
@@ -125,6 +117,7 @@ func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) 
 	return ret, nil
 }
 
+// Ping checks database connection.
 func (r *PostgresRepository) Ping(ctx context.Context) error {
 	err := r.db.PingContext(ctx)
 	if err != nil {
@@ -133,16 +126,19 @@ func (r *PostgresRepository) Ping(ctx context.Context) error {
 	return err
 }
 
+// Close closes database connection
 func (r *PostgresRepository) Close() error {
 	r.db.Close()
 
 	return nil
 }
 
+// GetData returns empty ShortenedRecord map.
 func (r *PostgresRepository) GetData() map[string]model.ShortenedRecord {
 	return make(map[string]model.ShortenedRecord)
 }
 
+// GetUserURLs returns all ShortenedRecord made by specified user.
 func (r *PostgresRepository) GetUserURLs(ctx context.Context, userID string) (map[string]model.ShortenedRecord, error) {
 	ret := make(map[string]model.ShortenedRecord)
 
@@ -170,6 +166,7 @@ func (r *PostgresRepository) GetUserURLs(ctx context.Context, userID string) (ma
 	return ret, nil
 }
 
+// BatchDelete removes multiple records by passed short ID map for specified user.
 func (r *PostgresRepository) BatchDelete(ctx context.Context, userID string, shortIDs []string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

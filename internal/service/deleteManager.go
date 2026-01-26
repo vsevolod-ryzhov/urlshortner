@@ -8,6 +8,7 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 )
 
+// DeleteManager is used for bath removing of stored records.
 type DeleteManager struct {
 	tasks       chan deleteTask
 	workerCount int
@@ -25,6 +26,7 @@ var (
 	initMutex sync.Mutex
 )
 
+// InitDeleteManager creates an instance of delete manager with specified number of workers.
 func InitDeleteManager(repo repository.Repository, workerCount int) {
 	initMutex.Lock()
 	defer initMutex.Unlock()
@@ -39,6 +41,7 @@ func InitDeleteManager(repo repository.Repository, workerCount int) {
 	}
 }
 
+// SubmitDeleteTask add new task from removing a shortened link made by specified user
 func SubmitDeleteTask(userID, shortID string) {
 	if deleteMgr != nil {
 		select {

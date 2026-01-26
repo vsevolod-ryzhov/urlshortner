@@ -1,3 +1,9 @@
+// Package logger used for logging information about incoming request:
+// - requested uri
+// - request method
+// - response status
+// - request processing duration
+// - response size
 package logger
 
 import (
