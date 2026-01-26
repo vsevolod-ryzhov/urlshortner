@@ -108,7 +108,7 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 	sendCreateLinkResponse(res, req, formatShortenedURL(shortened), alreadyExists)
 
 	message := audit.AuditMessage{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ts":      time.Now(),
 			"action":  "shorten",
 			"user_id": userID,
@@ -147,7 +147,7 @@ func handleGetLink(res http.ResponseWriter, req *http.Request) {
 	}
 
 	message := audit.AuditMessage{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"ts":      time.Now(),
 			"action":  "follow",
 			"user_id": userID,

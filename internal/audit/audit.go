@@ -10,7 +10,7 @@ import (
 )
 
 type AuditMessage struct {
-	Data interface{} `json:"data"`
+	Data any `json:"data"`
 }
 
 type Subject interface {
