@@ -1,5 +1,6 @@
 ## Tests
 - go test ./...
+- ./cmd/staticlint/checker ./internal/...
 1. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortener/shortener
 2. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration2$ -source-path=.
 3. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration3$ -source-path=.

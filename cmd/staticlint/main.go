@@ -8,6 +8,8 @@ import (
 	"golang.org/x/tools/go/analysis/passes/printf"
 	"golang.org/x/tools/go/analysis/passes/shadow"
 	"golang.org/x/tools/go/analysis/passes/structtag"
+
+	"honnef.co/go/tools/staticcheck"
 )
 
 func main() {
@@ -20,9 +22,18 @@ func main() {
 		structtag.Analyzer,
 	}
 
+	for _, analyzer := range staticcheck.Analyzers {
+		if len(analyzer.Analyzer.Name) >= 2 && analyzer.Analyzer.Name[:2] == "SA" {
+			analyzers = append(analyzers, analyzer.Analyzer)
+		}
+	}
+
 	for _, a := range analyzers {
 		if a.Flags.Lookup("buildtags") != nil {
-			a.Flags.Set("buildtags", "")
+			err := a.Flags.Set("buildtags", "")
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
