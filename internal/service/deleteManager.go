@@ -13,7 +13,6 @@ type DeleteManager struct {
 	tasks       chan deleteTask
 	workerCount int
 	repo        repository.Repository
-	once        sync.Once
 }
 
 type deleteTask struct {
