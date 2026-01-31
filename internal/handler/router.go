@@ -36,9 +36,9 @@ func readCreateLinkRequestBody(req *http.Request) ([]byte, error) {
 	if req.Header.Get("Content-Type") == "application/json" {
 		var requestModel model.JSONRequest
 		dec := json.NewDecoder(req.Body)
-		if err := dec.Decode(&requestModel); err != nil {
-			logger.Log.Debug("cannot decode request JSON body", zap.Error(err))
-			return nil, err
+		if errDecode := dec.Decode(&requestModel); errDecode != nil {
+			logger.Log.Debug("cannot decode request JSON body", zap.Error(errDecode))
+			return nil, errDecode
 		}
 		return []byte(requestModel.URL), nil
 	}

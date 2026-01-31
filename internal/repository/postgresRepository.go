@@ -47,8 +47,8 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
+	if errPing := db.Ping(); errPing != nil {
+		return nil, errPing
 	}
 
 	migrationDB, err := sql.Open("pgx", connectionString)
@@ -58,9 +58,9 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 	}
 	defer migrationDB.Close()
 
-	if err := applyMigrations(migrationDB); err != nil {
+	if errMigrations := applyMigrations(migrationDB); errMigrations != nil {
 		db.Close()
-		return nil, fmt.Errorf("failed to apply migrations: %w", err)
+		return nil, fmt.Errorf("failed to apply migrations: %w", errMigrations)
 	}
 
 	return &PostgresRepository{db: db}, nil
