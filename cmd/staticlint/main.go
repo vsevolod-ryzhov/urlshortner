@@ -1,8 +1,6 @@
 package main
 
 import (
-	"go/build"
-
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/checker/exitchecker"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
@@ -15,9 +13,6 @@ import (
 )
 
 func main() {
-	buildCtx := build.Default
-	buildCtx.CgoEnabled = false
-
 	analyzers := []*analysis.Analyzer{
 		printf.Analyzer,
 		shadow.Analyzer,
