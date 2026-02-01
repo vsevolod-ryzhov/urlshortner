@@ -5,6 +5,8 @@ import (
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
+	"golang.org/x/tools/go/analysis/passes/copylock"
+	"golang.org/x/tools/go/analysis/passes/httpresponse"
 	"golang.org/x/tools/go/analysis/passes/printf"
 	"golang.org/x/tools/go/analysis/passes/shadow"
 	"golang.org/x/tools/go/analysis/passes/structtag"
@@ -20,10 +22,21 @@ func main() {
 		printf.Analyzer,
 		shadow.Analyzer,
 		structtag.Analyzer,
+		httpresponse.Analyzer,
+		copylock.Analyzer,
 	}
 
 	for _, analyzer := range staticcheck.Analyzers {
 		if len(analyzer.Analyzer.Name) >= 2 && analyzer.Analyzer.Name[:2] == "SA" {
+			analyzers = append(analyzers, analyzer.Analyzer)
+		}
+		if analyzer.Analyzer.Name == "QF1007" {
+			analyzers = append(analyzers, analyzer.Analyzer)
+		}
+		if analyzer.Analyzer.Name == "ST1023" {
+			analyzers = append(analyzers, analyzer.Analyzer)
+		}
+		if analyzer.Analyzer.Name == "S1039" {
 			analyzers = append(analyzers, analyzer.Analyzer)
 		}
 	}
