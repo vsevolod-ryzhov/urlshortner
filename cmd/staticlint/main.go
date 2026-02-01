@@ -3,6 +3,7 @@ package main
 import (
 	"go/build"
 
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/checker/exitchecker"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/copylock"
@@ -10,7 +11,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/printf"
 	"golang.org/x/tools/go/analysis/passes/shadow"
 	"golang.org/x/tools/go/analysis/passes/structtag"
-
 	"honnef.co/go/tools/staticcheck"
 )
 
@@ -24,6 +24,7 @@ func main() {
 		structtag.Analyzer,
 		httpresponse.Analyzer,
 		copylock.Analyzer,
+		exitchecker.Analyzer,
 	}
 
 	for _, analyzer := range staticcheck.Analyzers {
