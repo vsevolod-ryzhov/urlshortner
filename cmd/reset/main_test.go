@@ -553,9 +553,9 @@ type User struct {
 		t.Fatalf("failed to write user.go: %v", err)
 	}
 
-	originalDir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("failed to get current directory: %v", err)
+	originalDir, errCwd := os.Getwd()
+	if errCwd != nil {
+		t.Fatalf("failed to get current directory: %v", errCwd)
 	}
 	defer os.Chdir(originalDir)
 
