@@ -36,3 +36,4 @@
 - curl -o profiles/base.pprof http://localhost:6060/debug/pprof/heap
 - go tool pprof -http=":9090" profiles/base.pprof
 - go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out | grep total
+- go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(date +'%Y/%m/%d %H:%M:%S')' -X main.buildCommit=test" cmd/shortener/main.go
