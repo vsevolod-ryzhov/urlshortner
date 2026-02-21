@@ -1,3 +1,4 @@
+// Package audit is used for sending debug messages to specified by config destinations (file / URL).
 package audit
 
 import (

@@ -1,3 +1,4 @@
+// Package errors stores common application errors
 package errors
 
 import "errors"

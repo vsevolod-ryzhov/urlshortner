@@ -377,15 +377,15 @@ func TestFileRepository_ConcurrentAccess(t *testing.T) {
 				UserID:      "test-user",
 			}
 
-			if err := repo.Save(record); err != nil {
-				errors <- err
+			if errSave := repo.Save(record); errSave != nil {
+				errors <- errSave
 				return
 			}
 
 			ctx := context.Background()
-			_, err := repo.GetByShortURL(ctx, string(rune('a'+id)))
-			if err != nil {
-				errors <- err
+			_, errGet := repo.GetByShortURL(ctx, string(rune('a'+id)))
+			if errGet != nil {
+				errors <- errGet
 				return
 			}
 
@@ -396,8 +396,8 @@ func TestFileRepository_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		select {
 		case <-done:
-		case err := <-errors:
-			t.Errorf("Concurrent operation failed: %v", err)
+		case errCh := <-errors:
+			t.Errorf("Concurrent operation failed: %v", errCh)
 		}
 	}
 

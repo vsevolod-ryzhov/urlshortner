@@ -373,8 +373,8 @@ func TestInvalidSecretLength(t *testing.T) {
 				require.NoError(t, err)
 				require.NotEmpty(t, encrypted)
 
-				decrypted, err := decrypt(encrypted)
-				require.NoError(t, err)
+				decrypted, errDecrypt := decrypt(encrypted)
+				require.NoError(t, errDecrypt)
 				assert.Equal(t, data, decrypted)
 			} else {
 				assert.Error(t, err)

@@ -1,5 +1,6 @@
 ## Tests
 - go test ./...
+- ./cmd/staticlint/checker ./...
 1. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortener/shortener
 2. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration2$ -source-path=.
 3. shortenertest_v2-darwin-arm64 -test.v -test.run=^TestIteration3$ -source-path=.
@@ -21,6 +22,7 @@
 
 ## Misc
 - go build -o cmd/shortener/shortener cmd/shortener/*.go
+- go build -o cmd/staticlint/checker cmd/staticlint/*.go
 - lsof -nP -i4TCP:8888 | grep LISTEN
 - curl -X POST -d "url=https://ya.ru" 127.0.0.1:8888 -v
 - go run cmd/shortener/main.go -d="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable" -audit-file="/tmp/urlShortenerAudit" -audit-url="http://localhost:8081"
@@ -34,3 +36,4 @@
 - curl -o profiles/base.pprof http://localhost:6060/debug/pprof/heap
 - go tool pprof -http=":9090" profiles/base.pprof
 - go test ./... -coverprofile=coverage.out && go tool cover -func=coverage.out | grep total
+- go run -ldflags "-X main.buildVersion=v1.0.1 -X 'main.buildDate=$(date +'%Y/%m/%d %H:%M:%S')' -X main.buildCommit=test" cmd/shortener/main.go

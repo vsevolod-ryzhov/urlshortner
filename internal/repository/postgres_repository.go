@@ -10,7 +10,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/golang-migrate/migrate/v4/source/github"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
+	myErrors "github.com/vsevolod-ryzhov/urlshortner.git/internal/errors"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
 )
 
@@ -47,8 +47,8 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
+	if errPing := db.Ping(); errPing != nil {
+		return nil, errPing
 	}
 
 	migrationDB, err := sql.Open("pgx", connectionString)
@@ -58,9 +58,9 @@ func NewPostgresRepository(connectionString string) (*PostgresRepository, error)
 	}
 	defer migrationDB.Close()
 
-	if err := applyMigrations(migrationDB); err != nil {
+	if errMigrations := applyMigrations(migrationDB); errMigrations != nil {
 		db.Close()
-		return nil, fmt.Errorf("failed to apply migrations: %w", err)
+		return nil, fmt.Errorf("failed to apply migrations: %w", errMigrations)
 	}
 
 	return &PostgresRepository{db: db}, nil
@@ -82,8 +82,8 @@ func (r *PostgresRepository) GetByShortURL(ctx context.Context, shortURL string)
 	query := `SELECT id, short, original, user_id, is_deleted FROM links WHERE short = $1`
 
 	err := r.db.QueryRowContext(ctx, query, shortURL).Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted)
-	if err == sql.ErrNoRows {
-		return nil, errors.ErrNotFound
+	if err != nil {
+		return nil, myErrors.ErrNotFound
 	}
 
 	return &record, err
@@ -103,7 +103,7 @@ func (r *PostgresRepository) GetAll() (map[string]model.ShortenedRecord, error) 
 	for rows.Next() {
 		var record model.ShortenedRecord
 
-		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.IsDeleted); err != nil {
+		if err := rows.Scan(&record.UUID, &record.ShortURL, &record.OriginalURL, &record.UserID, &record.IsDeleted); err != nil {
 			return nil, err
 		}
 

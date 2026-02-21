@@ -207,8 +207,8 @@ func TestFileObserver_Update(t *testing.T) {
 	}
 
 	var readMessage AuditMessage
-	if err := json.Unmarshal(content, &readMessage); err != nil {
-		t.Fatalf("failed to unmarshal JSON: %v", err)
+	if e := json.Unmarshal(content, &readMessage); e != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", e)
 	}
 
 	dataMap, ok := readMessage.Data.(map[string]interface{})
