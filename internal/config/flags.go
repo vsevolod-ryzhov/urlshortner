@@ -4,6 +4,7 @@ package config
 import (
 	"flag"
 	"os"
+	"strconv"
 )
 
 var Options struct {
@@ -16,6 +17,7 @@ var Options struct {
 	Environment      string `env:"ENVIRONMENT" envDefault:"development"` // Application environment
 	AuditFilePath    string // Path to audit file where app logs will be stored
 	AuditURL         string // URL for audit service where app logs will be sent
+	HTTPSEnabled     bool
 }
 
 // ParseFlags func reads startup arguments and env variables
@@ -28,6 +30,7 @@ func ParseFlags() {
 	flag.StringVar(&Options.CookieSecret, "c", "", "Cookie secret")
 	flag.StringVar(&Options.AuditFilePath, "audit-file", "", "Audit file path")
 	flag.StringVar(&Options.AuditURL, "audit-url", "", "Audit URL")
+	flag.BoolVar(&Options.HTTPSEnabled, "s", false, "Enable HTTPS")
 
 	flag.Parse()
 
@@ -55,8 +58,12 @@ func ParseFlags() {
 	if auditURL, exists := os.LookupEnv("AUDIT_URL"); exists {
 		Options.AuditURL = auditURL
 	}
+	if isHTTPSEnabled, exists := os.LookupEnv("ENABLE_HTTPS"); exists {
+		Options.HTTPSEnabled, _ = strconv.ParseBool(isHTTPSEnabled)
+	}
 
 	if Options.CookieSecret == "" {
+		// For passing auto-tests only
 		Options.CookieSecret = "JVaB8G2m7tu9XSzQjLU3Vxf5X4uU3apR"
 	}
 

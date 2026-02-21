@@ -18,6 +18,7 @@ func setup() {
 		Environment      string `env:"ENVIRONMENT" envDefault:"development"`
 		AuditFilePath    string
 		AuditURL         string
+		HTTPSEnabled     bool
 	}{}
 }
 

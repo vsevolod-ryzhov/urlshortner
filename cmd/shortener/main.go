@@ -16,6 +16,7 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
@@ -75,14 +76,34 @@ func main() {
 		}
 	}()
 
-	srv := &http.Server{
-		Addr:         config.Options.AppPort,
-		Handler:      handlerChain,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-	}
-	err := srv.ListenAndServe()
-	if err != nil {
-		panic(err)
+	if config.Options.HTTPSEnabled {
+		manager := &autocert.Manager{
+			Cache:  autocert.DirCache("cache-dir"),
+			Prompt: autocert.AcceptTOS,
+		}
+
+		srv := &http.Server{
+			Addr:         config.Options.AppPort,
+			Handler:      handlerChain,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			TLSConfig:    manager.TLSConfig(),
+		}
+
+		err := srv.ListenAndServeTLS("", "")
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		srv := &http.Server{
+			Addr:         config.Options.AppPort,
+			Handler:      handlerChain,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+		}
+		err := srv.ListenAndServe()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
