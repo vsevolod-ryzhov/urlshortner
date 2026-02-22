@@ -2,7 +2,9 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -20,8 +22,23 @@ var Options struct {
 	HTTPSEnabled     bool
 }
 
+type ConfigurationFile struct {
+	AppPort          string `json:"app_port"`
+	ShortenedBaseURL string `json:"shortened_base_url"`
+	FlagLogLevel     string `json:"log_level"`
+	StorageFilePath  string `json:"storage_file_path"`
+	DatabaseDSN      string `json:"database_dsn"`
+	CookieSecret     string `json:"cookie_secret"`
+	Environment      string `json:"environment"`
+	AuditFilePath    string `json:"audit_file_path"`
+	AuditURL         string `json:"audit_url"`
+	HTTPSEnabled     bool   `json:"https_enabled"`
+}
+
 // ParseFlags func reads startup arguments and env variables
 func ParseFlags() {
+	var configFile string
+	flag.StringVar(&configFile, "config", "", "Path to configuration file")
 	flag.StringVar(&Options.AppPort, "a", "localhost:8080", "The address to bind the app to")
 	flag.StringVar(&Options.ShortenedBaseURL, "b", "localhost:8080", "The base url of shortened")
 	flag.StringVar(&Options.FlagLogLevel, "l", "info", "log level")
@@ -33,6 +50,16 @@ func ParseFlags() {
 	flag.BoolVar(&Options.HTTPSEnabled, "s", false, "Enable HTTPS")
 
 	flag.Parse()
+
+	if configFile == "" {
+		configFile = os.Getenv("CONFIG")
+	}
+
+	if configFile != "" {
+		if err := loadConfigFromFile(configFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to load config file %s: %v\n", configFile, err)
+		}
+	}
 
 	if envRunAddr, exists := os.LookupEnv("SERVER_ADDRESS"); exists {
 		Options.AppPort = envRunAddr
@@ -70,4 +97,68 @@ func ParseFlags() {
 	if len(Options.CookieSecret) != 16 && len(Options.CookieSecret) != 24 && len(Options.CookieSecret) != 32 {
 		panic("COOKIE_SECRET must be 16, 24 or 32 bytes long")
 	}
+}
+
+func loadConfigFromFile(filePath string) error {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("error reading config file: %w", err)
+	}
+
+	var fileConfig ConfigurationFile
+	if err := json.Unmarshal(data, &fileConfig); err != nil {
+		return fmt.Errorf("error parsing config file: %w", err)
+	}
+
+	if Options.AppPort == "localhost:8080" && fileConfig.AppPort != "" {
+		Options.AppPort = fileConfig.AppPort
+	}
+
+	if Options.ShortenedBaseURL == "localhost:8080" && fileConfig.ShortenedBaseURL != "" {
+		Options.ShortenedBaseURL = fileConfig.ShortenedBaseURL
+	}
+
+	if Options.FlagLogLevel == "info" && fileConfig.FlagLogLevel != "" {
+		Options.FlagLogLevel = fileConfig.FlagLogLevel
+	}
+
+	if Options.StorageFilePath == "/tmp/shortenerStorage" && fileConfig.StorageFilePath != "" {
+		Options.StorageFilePath = fileConfig.StorageFilePath
+	}
+
+	if Options.DatabaseDSN == "" && fileConfig.DatabaseDSN != "" {
+		Options.DatabaseDSN = fileConfig.DatabaseDSN
+	}
+
+	if Options.CookieSecret == "" && fileConfig.CookieSecret != "" {
+		Options.CookieSecret = fileConfig.CookieSecret
+	}
+
+	if Options.Environment == "" && fileConfig.Environment != "" {
+		Options.Environment = fileConfig.Environment
+	}
+
+	if Options.AuditFilePath == "" && fileConfig.AuditFilePath != "" {
+		Options.AuditFilePath = fileConfig.AuditFilePath
+	}
+
+	if Options.AuditURL == "" && fileConfig.AuditURL != "" {
+		Options.AuditURL = fileConfig.AuditURL
+	}
+
+	if !isFlagPassed("s") && fileConfig.HTTPSEnabled {
+		Options.HTTPSEnabled = fileConfig.HTTPSEnabled
+	}
+
+	return nil
+}
+
+func isFlagPassed(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
 }
