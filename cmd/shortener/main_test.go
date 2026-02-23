@@ -424,7 +424,7 @@ func TestHandlerChain(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handlerChain.ServeHTTP(w, req)
-
+	defer w.Result().Body.Close()
 	assert.NotNil(t, w.Result())
 }
 
