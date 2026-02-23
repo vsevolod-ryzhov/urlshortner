@@ -37,9 +37,7 @@ func main() {
 
 	config.ParseFlags()
 
-	fmt.Println("Build version: ", buildVersion)
-	fmt.Println("Build date: ", buildDate)
-	fmt.Println("Build commit: ", buildCommit)
+	printBuildInfo()
 
 	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
 
@@ -134,4 +132,10 @@ func startServer(srv *http.Server) error {
 		return srv.ListenAndServeTLS("", "")
 	}
 	return srv.ListenAndServe()
+}
+
+func printBuildInfo() {
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
 }
