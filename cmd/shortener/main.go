@@ -32,7 +32,7 @@ var (
 
 func main() {
 	sigInt := make(chan os.Signal, 1)
-	signal.Notify(sigInt, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigInt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	idleConnectionsClosed := make(chan struct{})
 
 	config.ParseFlags()
