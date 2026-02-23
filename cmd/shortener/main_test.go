@@ -424,8 +424,11 @@ func TestHandlerChain(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	handlerChain.ServeHTTP(w, req)
-	defer w.Result().Body.Close()
-	assert.NotNil(t, w.Result())
+
+	result := w.Result()
+	defer result.Body.Close()
+
+	assert.NotNil(t, result)
 }
 
 func TestSignalHandling(t *testing.T) {
