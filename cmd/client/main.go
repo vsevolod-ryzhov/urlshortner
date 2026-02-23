@@ -10,8 +10,9 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
+var endpoint = "http://localhost:8080/"
+
 func main() {
-	endpoint := "http://localhost:8080/"
 	fmt.Println("Enter URL to be shortened:")
 
 	reader := bufio.NewReader(os.Stdin)
