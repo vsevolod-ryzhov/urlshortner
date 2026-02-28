@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -23,7 +24,7 @@ func main() {
 	}
 	long = strings.TrimSuffix(long, "\n")
 
-	client := resty.New()
+	client := resty.New().SetTimeout(10 * time.Second)
 	response, err := client.
 		R().
 		SetHeader("Content-Type", "text/plain").
