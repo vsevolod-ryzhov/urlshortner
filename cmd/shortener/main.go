@@ -2,8 +2,13 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "net/http/pprof"
@@ -16,6 +21,7 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
@@ -25,11 +31,13 @@ var (
 )
 
 func main() {
+	sigInt := make(chan os.Signal, 1)
+	signal.Notify(sigInt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	idleConnectionsClosed := make(chan struct{})
+
 	config.ParseFlags()
 
-	fmt.Println("Build version: ", buildVersion)
-	fmt.Println("Build date: ", buildDate)
-	fmt.Println("Build commit: ", buildCommit)
+	printBuildInfo()
 
 	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
 
@@ -68,21 +76,66 @@ func main() {
 		),
 	)
 
+	go startPprofServer()
+
+	srv := createServer(handlerChain)
 	go func() {
-		logger.Log.Info("Starting pprof server on :6060")
-		if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-			logger.Log.Error("Pprof server failed", zap.Error(err))
+		if err := startServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Log.Fatal("Server failed", zap.Error(err))
 		}
 	}()
 
-	srv := &http.Server{
+	go func() {
+		<-sigInt
+		logger.Log.Info("Shutting down...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			logger.Log.Error("Server shutdown failed", zap.Error(err))
+		}
+		close(idleConnectionsClosed)
+	}()
+
+	<-idleConnectionsClosed
+}
+
+func startPprofServer() {
+	logger.Log.Info("Starting pprof server on :6060")
+	if err := http.ListenAndServe("localhost:6060", nil); err != nil {
+		logger.Log.Error("Pprof server failed", zap.Error(err))
+	}
+}
+
+func createServer(handler http.Handler) *http.Server {
+	server := &http.Server{
 		Addr:         config.Options.AppPort,
-		Handler:      handlerChain,
+		Handler:      handler,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
-	err := srv.ListenAndServe()
-	if err != nil {
-		panic(err)
+
+	if config.Options.HTTPSEnabled {
+		manager := &autocert.Manager{
+			Cache:  autocert.DirCache("cache-dir"),
+			Prompt: autocert.AcceptTOS,
+		}
+		server.TLSConfig = manager.TLSConfig()
 	}
+
+	return server
+}
+
+func startServer(srv *http.Server) error {
+	if config.Options.HTTPSEnabled {
+		return srv.ListenAndServeTLS("", "")
+	}
+	return srv.ListenAndServe()
+}
+
+func printBuildInfo() {
+	fmt.Println("Build version:", buildVersion)
+	fmt.Println("Build date:", buildDate)
+	fmt.Println("Build commit:", buildCommit)
 }

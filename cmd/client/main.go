@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 )
 
+var endpoint = "http://localhost:8080/"
+
 func main() {
-	endpoint := "http://localhost:8080/"
 	fmt.Println("Enter URL to be shortened:")
 
 	reader := bufio.NewReader(os.Stdin)
@@ -22,7 +24,7 @@ func main() {
 	}
 	long = strings.TrimSuffix(long, "\n")
 
-	client := resty.New()
+	client := resty.New().SetTimeout(10 * time.Second)
 	response, err := client.
 		R().
 		SetHeader("Content-Type", "text/plain").
