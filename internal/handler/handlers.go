@@ -269,3 +269,32 @@ func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusAccepted)
 }
+
+func handleStats(res http.ResponseWriter, req *http.Request) {
+	userID, ok := service.GetUserIDFromContext(req.Context())
+	if !ok || userID == "" {
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	links, users, error := service.GetStats(req.Context())
+	if error != nil {
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+	}
+
+	res.WriteHeader(http.StatusOK)
+	type StatsResponse struct {
+		Urls  int `json:"urls"`
+		Users int `json:"users"`
+	}
+	response := StatsResponse{
+		Urls:  links,
+		Users: users,
+	}
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(res).Encode(response); err != nil {
+		http.Error(res, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+}

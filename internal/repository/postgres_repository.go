@@ -194,3 +194,15 @@ func (r *PostgresRepository) BatchDelete(ctx context.Context, userID string, sho
 
 	return tx.Commit()
 }
+
+// GetStats returns total numbers of links and unique users in storage
+func (r *PostgresRepository) GetStats(ctx context.Context) (int, int, error) {
+	var linksCount, usersCount int
+	query := `SELECT count(*) as links, count(distinct user_id) as users FROM links`
+	err := r.db.QueryRowContext(ctx, query).Scan(&linksCount, &usersCount)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return linksCount, usersCount, nil
+}

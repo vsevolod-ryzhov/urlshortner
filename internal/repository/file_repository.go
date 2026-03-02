@@ -167,3 +167,14 @@ func (r *FileRepository) BatchDelete(ctx context.Context, userID string, shortID
 
 	return nil
 }
+
+// GetStats returns total numbers of links and unique users in storage
+func (r *FileRepository) GetStats(ctx context.Context) (int, int, error) {
+	uniqueUsers := make(map[string]struct{})
+
+	for _, record := range r.data {
+		uniqueUsers[record.UserID] = struct{}{}
+	}
+
+	return len(r.data), len(uniqueUsers), nil
+}

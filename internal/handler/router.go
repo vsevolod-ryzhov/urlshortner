@@ -18,6 +18,7 @@ func MakeHandler(p *audit.AuditMessenger) *chi.Mux {
 	r.Post("/api/shorten", handleCreateLink)
 	r.Post("/api/shorten/batch", handleBatch)
 	r.Delete("/api/user/urls", handleDeleteURLs)
+	r.Get("/api/internal/stats", handleStats)
 
 	return r
 }
