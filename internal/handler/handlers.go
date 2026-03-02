@@ -272,6 +272,11 @@ func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 }
 
 func handleStats(res http.ResponseWriter, req *http.Request) {
+	if config.Options.TrustedSubnet == "" {
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	_, IPNet, err := net.ParseCIDR(config.Options.TrustedSubnet)
 	if err != nil {
 		http.Error(res, "Internal server error", http.StatusInternalServerError)
