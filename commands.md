@@ -26,7 +26,7 @@
 - go build -o cmd/staticlint/checker cmd/staticlint/*.go
 - lsof -nP -i4TCP:8888 | grep LISTEN
 - curl -X POST -d "url=https://ya.ru" 127.0.0.1:8888 -v
-- go run cmd/shortener/main.go -d="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable" -audit-file="/tmp/urlShortenerAudit" -audit-url="http://localhost:8081"
+- go run cmd/shortener/main.go -d="host=localhost user=postgres_user password=postgres_password dbname=postgres_db sslmode=disable" -audit-file="/tmp/urlShortenerAudit" -audit-url="http://localhost:8081" -t="127.0.0.1/8"
 - curl -X POST -H "Content-Type: application/json" -d '{"url":"https://ya.ru"}' 127.0.0.1:8080 -v --compressed
 - go test ./... -coverprofile cover.out
 - go tool cover -html=cover.out

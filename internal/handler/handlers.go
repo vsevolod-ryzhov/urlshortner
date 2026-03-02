@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -271,6 +272,16 @@ func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 }
 
 func handleStats(res http.ResponseWriter, req *http.Request) {
+	_, IPNet, err := net.ParseCIDR(config.Options.TrustedSubnet)
+	if err != nil {
+		http.Error(res, "Internal server error", http.StatusInternalServerError)
+	}
+	userIP := net.ParseIP(req.Header.Get("X-Real-IP"))
+	if !IPNet.Contains(userIP) {
+		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok || userID == "" {
 		http.Error(res, "Unauthorized", http.StatusUnauthorized)

@@ -21,6 +21,7 @@ func setup() {
 		AuditFilePath    string
 		AuditURL         string
 		HTTPSEnabled     bool
+		TrustedSubnet    string
 	}{}
 }
 
