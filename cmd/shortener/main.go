@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,12 +17,16 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/grpcserver"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
+	"google.golang.org/grpc"
+
+	pb "github.com/vsevolod-ryzhov/urlshortner.git/api/proto"
 )
 
 var (
@@ -85,6 +90,8 @@ func main() {
 		}
 	}()
 
+	go startGRPCServer()
+
 	go func() {
 		<-sigInt
 		logger.Log.Info("Shutting down...")
@@ -138,4 +145,23 @@ func printBuildInfo() {
 	fmt.Println("Build version:", buildVersion)
 	fmt.Println("Build date:", buildDate)
 	fmt.Println("Build commit:", buildCommit)
+}
+
+func startGRPCServer() {
+	listen, err := net.Listen("tcp", ":3200")
+	if err != nil {
+		logger.Log.Fatal("gRPC listener init error", zap.Error(err))
+		return
+	}
+
+	s := grpc.NewServer()
+
+	grpcServer := grpcserver.NewShortenerServer(logger.Log)
+
+	pb.RegisterShortenerServiceServer(s, grpcServer)
+
+	logger.Log.Info("gRPC server started successfully on :3200")
+	if grpcError := s.Serve(listen); grpcError != nil {
+		logger.Log.Fatal("gRPC server failed", zap.Error(grpcError))
+	}
 }

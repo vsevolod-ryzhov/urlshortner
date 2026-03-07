@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v7.34.0
-// source: api/shortener.proto
+// source: shortener.proto
 
 package proto
 
@@ -32,7 +32,7 @@ type URLShortenRequest struct {
 
 func (x *URLShortenRequest) Reset() {
 	*x = URLShortenRequest{}
-	mi := &file_api_shortener_proto_msgTypes[0]
+	mi := &file_shortener_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +44,7 @@ func (x *URLShortenRequest) String() string {
 func (*URLShortenRequest) ProtoMessage() {}
 
 func (x *URLShortenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_shortener_proto_msgTypes[0]
+	mi := &file_shortener_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -110,7 +110,7 @@ type URLShortenResponse struct {
 
 func (x *URLShortenResponse) Reset() {
 	*x = URLShortenResponse{}
-	mi := &file_api_shortener_proto_msgTypes[1]
+	mi := &file_shortener_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -122,7 +122,7 @@ func (x *URLShortenResponse) String() string {
 func (*URLShortenResponse) ProtoMessage() {}
 
 func (x *URLShortenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_shortener_proto_msgTypes[1]
+	mi := &file_shortener_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -188,7 +188,7 @@ type URLExpandRequest struct {
 
 func (x *URLExpandRequest) Reset() {
 	*x = URLExpandRequest{}
-	mi := &file_api_shortener_proto_msgTypes[2]
+	mi := &file_shortener_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -200,7 +200,7 @@ func (x *URLExpandRequest) String() string {
 func (*URLExpandRequest) ProtoMessage() {}
 
 func (x *URLExpandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_shortener_proto_msgTypes[2]
+	mi := &file_shortener_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -266,7 +266,7 @@ type URLExpandResponse struct {
 
 func (x *URLExpandResponse) Reset() {
 	*x = URLExpandResponse{}
-	mi := &file_api_shortener_proto_msgTypes[3]
+	mi := &file_shortener_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -278,7 +278,7 @@ func (x *URLExpandResponse) String() string {
 func (*URLExpandResponse) ProtoMessage() {}
 
 func (x *URLExpandResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_shortener_proto_msgTypes[3]
+	mi := &file_shortener_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -342,7 +342,7 @@ type UserURLsResponse struct {
 
 func (x *UserURLsResponse) Reset() {
 	*x = UserURLsResponse{}
-	mi := &file_api_shortener_proto_msgTypes[4]
+	mi := &file_shortener_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -354,7 +354,7 @@ func (x *UserURLsResponse) String() string {
 func (*UserURLsResponse) ProtoMessage() {}
 
 func (x *UserURLsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_shortener_proto_msgTypes[4]
+	mi := &file_shortener_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +404,7 @@ type URLData struct {
 
 func (x *URLData) Reset() {
 	*x = URLData{}
-	mi := &file_api_shortener_proto_msgTypes[5]
+	mi := &file_shortener_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -416,7 +416,7 @@ func (x *URLData) String() string {
 func (*URLData) ProtoMessage() {}
 
 func (x *URLData) ProtoReflect() protoreflect.Message {
-	mi := &file_api_shortener_proto_msgTypes[5]
+	mi := &file_shortener_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,11 +503,11 @@ func (b0 URLData_builder) Build() *URLData {
 	return m0
 }
 
-var File_api_shortener_proto protoreflect.FileDescriptor
+var File_shortener_proto protoreflect.FileDescriptor
 
-const file_api_shortener_proto_rawDesc = "" +
+const file_shortener_proto_rawDesc = "" +
 	"\n" +
-	"\x13api/shortener.proto\x12 vsevolodryzhov.urlshortner.proto\x1a\x1bgoogle/protobuf/empty.proto\"%\n" +
+	"\x0fshortener.proto\x12 vsevolodryzhov.urlshortner.proto\x1a\x1bgoogle/protobuf/empty.proto\"%\n" +
 	"\x11URLShortenRequest\x12\x10\n" +
 	"\x03url\x18\x01 \x01(\tR\x03url\",\n" +
 	"\x12URLShortenResponse\x12\x16\n" +
@@ -527,8 +527,8 @@ const file_api_shortener_proto_rawDesc = "" +
 	"\tExpandURL\x122.vsevolodryzhov.urlshortner.proto.URLExpandRequest\x1a3.vsevolodryzhov.urlshortner.proto.URLExpandResponse\x12Z\n" +
 	"\fListUserURLs\x12\x16.google.protobuf.Empty\x1a2.vsevolodryzhov.urlshortner.proto.UserURLsResponseB6Z4github.com/vsevolod-ryzhov/urlshortner.git/api/protob\beditionsp\xe8\a"
 
-var file_api_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
-var file_api_shortener_proto_goTypes = []any{
+var file_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_shortener_proto_goTypes = []any{
 	(*URLShortenRequest)(nil),  // 0: vsevolodryzhov.urlshortner.proto.URLShortenRequest
 	(*URLShortenResponse)(nil), // 1: vsevolodryzhov.urlshortner.proto.URLShortenResponse
 	(*URLExpandRequest)(nil),   // 2: vsevolodryzhov.urlshortner.proto.URLExpandRequest
@@ -537,7 +537,7 @@ var file_api_shortener_proto_goTypes = []any{
 	(*URLData)(nil),            // 5: vsevolodryzhov.urlshortner.proto.URLData
 	(*emptypb.Empty)(nil),      // 6: google.protobuf.Empty
 }
-var file_api_shortener_proto_depIdxs = []int32{
+var file_shortener_proto_depIdxs = []int32{
 	5, // 0: vsevolodryzhov.urlshortner.proto.UserURLsResponse.url:type_name -> vsevolodryzhov.urlshortner.proto.URLData
 	0, // 1: vsevolodryzhov.urlshortner.proto.ShortenerService.ShortenURL:input_type -> vsevolodryzhov.urlshortner.proto.URLShortenRequest
 	2, // 2: vsevolodryzhov.urlshortner.proto.ShortenerService.ExpandURL:input_type -> vsevolodryzhov.urlshortner.proto.URLExpandRequest
@@ -552,26 +552,26 @@ var file_api_shortener_proto_depIdxs = []int32{
 	0, // [0:1] is the sub-list for field type_name
 }
 
-func init() { file_api_shortener_proto_init() }
-func file_api_shortener_proto_init() {
-	if File_api_shortener_proto != nil {
+func init() { file_shortener_proto_init() }
+func file_shortener_proto_init() {
+	if File_shortener_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_shortener_proto_rawDesc), len(file_api_shortener_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_shortener_proto_rawDesc), len(file_shortener_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_api_shortener_proto_goTypes,
-		DependencyIndexes: file_api_shortener_proto_depIdxs,
-		MessageInfos:      file_api_shortener_proto_msgTypes,
+		GoTypes:           file_shortener_proto_goTypes,
+		DependencyIndexes: file_shortener_proto_depIdxs,
+		MessageInfos:      file_shortener_proto_msgTypes,
 	}.Build()
-	File_api_shortener_proto = out.File
-	file_api_shortener_proto_goTypes = nil
-	file_api_shortener_proto_depIdxs = nil
+	File_shortener_proto = out.File
+	file_shortener_proto_goTypes = nil
+	file_shortener_proto_depIdxs = nil
 }
