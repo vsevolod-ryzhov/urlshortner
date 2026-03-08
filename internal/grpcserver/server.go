@@ -4,6 +4,8 @@ package grpcserver
 import (
 	"context"
 
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	pb "github.com/vsevolod-ryzhov/urlshortner.git/api/proto"
@@ -23,6 +25,17 @@ func NewShortenerServer(logger *zap.Logger) *ShortenerServer {
 
 func (s *ShortenerServer) ShortenURL(ctx context.Context, in *pb.URLShortenRequest) (*pb.URLShortenResponse, error) {
 	var response pb.URLShortenResponse
+
+	userID, ok := service.GetUserIDFromContext(ctx)
+	if !ok {
+		userID = "unknown"
+	}
+	shortened, _, errCreation := service.CreateShortURL(ctx, in.GetUrl(), userID)
+	if errCreation != nil {
+		logger.Log.Debug("Shortened result was not saved to file", zap.Error(errCreation))
+	}
+
+	response.SetResult(shortened)
 
 	return &response, nil
 }
