@@ -65,7 +65,7 @@ func TestAuthMiddleware_NewSession(t *testing.T) {
 	assert.False(t, cookie.Secure, "Cookie should not be Secure in development")
 	assert.Equal(t, http.SameSiteLaxMode, cookie.SameSite)
 
-	session, err := decodeAndVerifyCookie(cookie.Value)
+	session, err := DecodeAndVerifyCookie(cookie.Value)
 	require.NoError(t, err)
 	assert.NotEmpty(t, session.UserID)
 	assert.WithinDuration(t, time.Now(), session.CreatedAt, time.Second)
@@ -172,7 +172,7 @@ func TestDecodeAndVerifyCookie_Invalid(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			session, err := decodeAndVerifyCookie(tc.cookieValue)
+			session, err := DecodeAndVerifyCookie(tc.cookieValue)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -326,7 +326,7 @@ func TestConcurrentSessions(t *testing.T) {
 
 			if len(cookies) > 0 {
 				cookie := cookies[0]
-				session, err := decodeAndVerifyCookie(cookie.Value)
+				session, err := DecodeAndVerifyCookie(cookie.Value)
 				if err == nil {
 					mu.Lock()
 					userIDs[session.UserID] = true

@@ -8,7 +8,6 @@ package proto
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -21,9 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ShortenerService_ShortenURL_FullMethodName   = "/vsevolodryzhov.urlshortner.proto.ShortenerService/ShortenURL"
-	ShortenerService_ExpandURL_FullMethodName    = "/vsevolodryzhov.urlshortner.proto.ShortenerService/ExpandURL"
-	ShortenerService_ListUserURLs_FullMethodName = "/vsevolodryzhov.urlshortner.proto.ShortenerService/ListUserURLs"
+	ShortenerService_ShortenURL_FullMethodName      = "/vsevolodryzhov.urlshortner.proto.ShortenerService/ShortenURL"
+	ShortenerService_ExpandURL_FullMethodName       = "/vsevolodryzhov.urlshortner.proto.ShortenerService/ExpandURL"
+	ShortenerService_ListUserURLs_FullMethodName    = "/vsevolodryzhov.urlshortner.proto.ShortenerService/ListUserURLs"
+	ShortenerService_GetSessionToken_FullMethodName = "/vsevolodryzhov.urlshortner.proto.ShortenerService/GetSessionToken"
 )
 
 // ShortenerServiceClient is the client API for ShortenerService service.
@@ -33,6 +33,7 @@ type ShortenerServiceClient interface {
 	ShortenURL(ctx context.Context, in *URLShortenRequest, opts ...grpc.CallOption) (*URLShortenResponse, error)
 	ExpandURL(ctx context.Context, in *URLExpandRequest, opts ...grpc.CallOption) (*URLExpandResponse, error)
 	ListUserURLs(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*UserURLsResponse, error)
+	GetSessionToken(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SessionTokenResponse, error)
 }
 
 type shortenerServiceClient struct {
@@ -73,6 +74,16 @@ func (c *shortenerServiceClient) ListUserURLs(ctx context.Context, in *emptypb.E
 	return out, nil
 }
 
+func (c *shortenerServiceClient) GetSessionToken(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SessionTokenResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SessionTokenResponse)
+	err := c.cc.Invoke(ctx, ShortenerService_GetSessionToken_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ShortenerServiceServer is the server API for ShortenerService service.
 // All implementations must embed UnimplementedShortenerServiceServer
 // for forward compatibility.
@@ -80,6 +91,7 @@ type ShortenerServiceServer interface {
 	ShortenURL(context.Context, *URLShortenRequest) (*URLShortenResponse, error)
 	ExpandURL(context.Context, *URLExpandRequest) (*URLExpandResponse, error)
 	ListUserURLs(context.Context, *emptypb.Empty) (*UserURLsResponse, error)
+	GetSessionToken(context.Context, *emptypb.Empty) (*SessionTokenResponse, error)
 	mustEmbedUnimplementedShortenerServiceServer()
 }
 
@@ -98,6 +110,9 @@ func (UnimplementedShortenerServiceServer) ExpandURL(context.Context, *URLExpand
 }
 func (UnimplementedShortenerServiceServer) ListUserURLs(context.Context, *emptypb.Empty) (*UserURLsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUserURLs not implemented")
+}
+func (UnimplementedShortenerServiceServer) GetSessionToken(context.Context, *emptypb.Empty) (*SessionTokenResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetSessionToken not implemented")
 }
 func (UnimplementedShortenerServiceServer) mustEmbedUnimplementedShortenerServiceServer() {}
 func (UnimplementedShortenerServiceServer) testEmbeddedByValue()                          {}
@@ -174,6 +189,24 @@ func _ShortenerService_ListUserURLs_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ShortenerService_GetSessionToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ShortenerServiceServer).GetSessionToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ShortenerService_GetSessionToken_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ShortenerServiceServer).GetSessionToken(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ShortenerService_ServiceDesc is the grpc.ServiceDesc for ShortenerService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -192,6 +225,10 @@ var ShortenerService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUserURLs",
 			Handler:    _ShortenerService_ListUserURLs_Handler,
+		},
+		{
+			MethodName: "GetSessionToken",
+			Handler:    _ShortenerService_GetSessionToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

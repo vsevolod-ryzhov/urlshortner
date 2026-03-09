@@ -7,12 +7,11 @@
 package proto
 
 import (
-	reflect "reflect"
-	unsafe "unsafe"
-
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	reflect "reflect"
+	unsafe "unsafe"
 )
 
 const (
@@ -504,6 +503,84 @@ func (b0 URLData_builder) Build() *URLData {
 	return m0
 }
 
+type SessionTokenResponse struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Token       *string                `protobuf:"bytes,1,opt,name=token"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *SessionTokenResponse) Reset() {
+	*x = SessionTokenResponse{}
+	mi := &file_shortener_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SessionTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SessionTokenResponse) ProtoMessage() {}
+
+func (x *SessionTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_shortener_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *SessionTokenResponse) GetToken() string {
+	if x != nil {
+		if x.xxx_hidden_Token != nil {
+			return *x.xxx_hidden_Token
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *SessionTokenResponse) SetToken(v string) {
+	x.xxx_hidden_Token = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *SessionTokenResponse) HasToken() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *SessionTokenResponse) ClearToken() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Token = nil
+}
+
+type SessionTokenResponse_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Token *string
+}
+
+func (b0 SessionTokenResponse_builder) Build() *SessionTokenResponse {
+	m0 := &SessionTokenResponse{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Token != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_Token = b.Token
+	}
+	return m0
+}
+
 var File_shortener_proto protoreflect.FileDescriptor
 
 const file_shortener_proto_rawDesc = "" +
@@ -521,33 +598,39 @@ const file_shortener_proto_rawDesc = "" +
 	"\x03url\x18\x01 \x03(\v2).vsevolodryzhov.urlshortner.proto.URLDataR\x03url\"I\n" +
 	"\aURLData\x12\x1b\n" +
 	"\tshort_url\x18\x01 \x01(\tR\bshortUrl\x12!\n" +
-	"\foriginal_url\x18\x02 \x01(\tR\voriginalUrl2\xdd\x02\n" +
+	"\foriginal_url\x18\x02 \x01(\tR\voriginalUrl\",\n" +
+	"\x14SessionTokenResponse\x12\x14\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token2\xc0\x03\n" +
 	"\x10ShortenerService\x12w\n" +
 	"\n" +
 	"ShortenURL\x123.vsevolodryzhov.urlshortner.proto.URLShortenRequest\x1a4.vsevolodryzhov.urlshortner.proto.URLShortenResponse\x12t\n" +
 	"\tExpandURL\x122.vsevolodryzhov.urlshortner.proto.URLExpandRequest\x1a3.vsevolodryzhov.urlshortner.proto.URLExpandResponse\x12Z\n" +
-	"\fListUserURLs\x12\x16.google.protobuf.Empty\x1a2.vsevolodryzhov.urlshortner.proto.UserURLsResponseB6Z4github.com/vsevolod-ryzhov/urlshortner.git/api/protob\beditionsp\xe8\a"
+	"\fListUserURLs\x12\x16.google.protobuf.Empty\x1a2.vsevolodryzhov.urlshortner.proto.UserURLsResponse\x12a\n" +
+	"\x0fGetSessionToken\x12\x16.google.protobuf.Empty\x1a6.vsevolodryzhov.urlshortner.proto.SessionTokenResponseB6Z4github.com/vsevolod-ryzhov/urlshortner.git/api/protob\beditionsp\xe8\a"
 
-var file_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_shortener_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_shortener_proto_goTypes = []any{
-	(*URLShortenRequest)(nil),  // 0: vsevolodryzhov.urlshortner.proto.URLShortenRequest
-	(*URLShortenResponse)(nil), // 1: vsevolodryzhov.urlshortner.proto.URLShortenResponse
-	(*URLExpandRequest)(nil),   // 2: vsevolodryzhov.urlshortner.proto.URLExpandRequest
-	(*URLExpandResponse)(nil),  // 3: vsevolodryzhov.urlshortner.proto.URLExpandResponse
-	(*UserURLsResponse)(nil),   // 4: vsevolodryzhov.urlshortner.proto.UserURLsResponse
-	(*URLData)(nil),            // 5: vsevolodryzhov.urlshortner.proto.URLData
-	(*emptypb.Empty)(nil),      // 6: google.protobuf.Empty
+	(*URLShortenRequest)(nil),    // 0: vsevolodryzhov.urlshortner.proto.URLShortenRequest
+	(*URLShortenResponse)(nil),   // 1: vsevolodryzhov.urlshortner.proto.URLShortenResponse
+	(*URLExpandRequest)(nil),     // 2: vsevolodryzhov.urlshortner.proto.URLExpandRequest
+	(*URLExpandResponse)(nil),    // 3: vsevolodryzhov.urlshortner.proto.URLExpandResponse
+	(*UserURLsResponse)(nil),     // 4: vsevolodryzhov.urlshortner.proto.UserURLsResponse
+	(*URLData)(nil),              // 5: vsevolodryzhov.urlshortner.proto.URLData
+	(*SessionTokenResponse)(nil), // 6: vsevolodryzhov.urlshortner.proto.SessionTokenResponse
+	(*emptypb.Empty)(nil),        // 7: google.protobuf.Empty
 }
 var file_shortener_proto_depIdxs = []int32{
 	5, // 0: vsevolodryzhov.urlshortner.proto.UserURLsResponse.url:type_name -> vsevolodryzhov.urlshortner.proto.URLData
 	0, // 1: vsevolodryzhov.urlshortner.proto.ShortenerService.ShortenURL:input_type -> vsevolodryzhov.urlshortner.proto.URLShortenRequest
 	2, // 2: vsevolodryzhov.urlshortner.proto.ShortenerService.ExpandURL:input_type -> vsevolodryzhov.urlshortner.proto.URLExpandRequest
-	6, // 3: vsevolodryzhov.urlshortner.proto.ShortenerService.ListUserURLs:input_type -> google.protobuf.Empty
-	1, // 4: vsevolodryzhov.urlshortner.proto.ShortenerService.ShortenURL:output_type -> vsevolodryzhov.urlshortner.proto.URLShortenResponse
-	3, // 5: vsevolodryzhov.urlshortner.proto.ShortenerService.ExpandURL:output_type -> vsevolodryzhov.urlshortner.proto.URLExpandResponse
-	4, // 6: vsevolodryzhov.urlshortner.proto.ShortenerService.ListUserURLs:output_type -> vsevolodryzhov.urlshortner.proto.UserURLsResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	7, // 3: vsevolodryzhov.urlshortner.proto.ShortenerService.ListUserURLs:input_type -> google.protobuf.Empty
+	7, // 4: vsevolodryzhov.urlshortner.proto.ShortenerService.GetSessionToken:input_type -> google.protobuf.Empty
+	1, // 5: vsevolodryzhov.urlshortner.proto.ShortenerService.ShortenURL:output_type -> vsevolodryzhov.urlshortner.proto.URLShortenResponse
+	3, // 6: vsevolodryzhov.urlshortner.proto.ShortenerService.ExpandURL:output_type -> vsevolodryzhov.urlshortner.proto.URLExpandResponse
+	4, // 7: vsevolodryzhov.urlshortner.proto.ShortenerService.ListUserURLs:output_type -> vsevolodryzhov.urlshortner.proto.UserURLsResponse
+	6, // 8: vsevolodryzhov.urlshortner.proto.ShortenerService.GetSessionToken:output_type -> vsevolodryzhov.urlshortner.proto.SessionTokenResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -564,7 +647,7 @@ func file_shortener_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_shortener_proto_rawDesc), len(file_shortener_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

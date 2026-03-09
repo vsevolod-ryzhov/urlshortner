@@ -14,6 +14,8 @@ import (
 
 	_ "net/http/pprof"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
@@ -25,9 +27,15 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	pb "github.com/vsevolod-ryzhov/urlshortner.git/api/proto"
 )
+
+type tokenInfo struct {
+	UserID string
+}
 
 var (
 	buildVersion = "N/A"
@@ -154,7 +162,9 @@ func startGRPCServer() {
 		return
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcAuthInterceptor),
+	)
 
 	grpcServer := grpcserver.NewShortenerServer(logger.Log)
 
@@ -164,4 +174,50 @@ func startGRPCServer() {
 	if grpcError := s.Serve(listen); grpcError != nil {
 		logger.Log.Fatal("gRPC server failed", zap.Error(grpcError))
 	}
+}
+
+func grpcAuth(ctx context.Context) (context.Context, error) {
+	token, err := auth.AuthFromMD(ctx, "bearer")
+	if err != nil {
+		return nil, err
+	}
+
+	tokenInfo, err := parseToken(token)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
+	}
+
+	ctx = logging.InjectFields(ctx, logging.Fields{"user.id", tokenInfo.UserID})
+
+	ctx = context.WithValue(ctx, grpcserver.UserIDKey, tokenInfo.UserID)
+
+	return ctx, nil
+}
+
+func parseToken(token string) (*tokenInfo, error) {
+	session, err := service.DecodeAndVerifyCookie(token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode cookie: %w", err)
+	}
+
+	return &tokenInfo{
+		UserID: session.UserID,
+	}, nil
+}
+
+func grpcAuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	publicMethods := map[string]bool{
+		"/vsevolodryzhov.urlshortner.proto.ShortenerService/GetSessionToken": true,
+	}
+
+	if publicMethods[info.FullMethod] {
+		return handler(ctx, req)
+	}
+
+	newCtx, err := grpcAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return handler(newCtx, req)
 }

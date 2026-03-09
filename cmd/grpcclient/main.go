@@ -6,6 +6,8 @@ import (
 	"os"
 
 	pb "github.com/vsevolod-ryzhov/urlshortner.git/api/proto"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,7 +24,20 @@ func main() {
 	defer conn.Close()
 	c := pb.NewShortenerServiceClient(conn)
 
-	if err := SensRequests(ctx, c); err != nil {
+	tokenResp, err := c.GetSessionToken(ctx, &emptypb.Empty{})
+	if err != nil {
+		fmt.Printf("failed to get session token: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Got token: %s\n", tokenResp.GetToken())
+
+	md := metadata.New(map[string]string{
+		"authorization": "bearer " + tokenResp.GetToken(),
+	})
+	authCtx := metadata.NewOutgoingContext(ctx, md)
+
+	if err := SensRequests(authCtx, c); err != nil {
 		fmt.Println("error sending requests %w", err)
 		os.Exit(1)
 	}
@@ -31,15 +46,32 @@ func main() {
 func SensRequests(ctx context.Context, c pb.ShortenerServiceClient) error {
 	links := []string{"https://ya.ru", "https://ya.com"}
 	for _, link := range links {
-		response, err := c.ShortenURL(ctx, pb.URLShortenRequest_builder{
+		responseShorten, errShorten := c.ShortenURL(ctx, pb.URLShortenRequest_builder{
 			Url: &link,
 		}.Build())
 
-		if err != nil {
-			return fmt.Errorf("shorten URL request error: %w", err)
+		if errShorten != nil {
+			return fmt.Errorf("shorten URL request error: %w", errShorten)
 		}
 
-		fmt.Println(response.GetResult())
+		shortened := responseShorten.GetResult()
+		fmt.Println(shortened)
+
+		responseExpand, errExpand := c.ExpandURL(ctx, pb.URLExpandRequest_builder{
+			Id: &shortened,
+		}.Build())
+
+		if errExpand != nil {
+			return fmt.Errorf("expand URL request error: %w", errExpand)
+		}
+
+		fmt.Println(responseExpand.GetResult())
 	}
+
+	response, err := c.ListUserURLs(ctx, &emptypb.Empty{})
+	if err != nil {
+		return fmt.Errorf("list user URLs request error: %w", err)
+	}
+	fmt.Println(response)
 	return nil
 }

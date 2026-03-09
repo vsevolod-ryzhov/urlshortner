@@ -10,6 +10,7 @@ service ShortenerService {
   rpc ShortenURL (URLShortenRequest) returns (URLShortenResponse);
   rpc ExpandURL (URLExpandRequest) returns (URLExpandResponse);
   rpc ListUserURLs (google.protobuf.Empty) returns (UserURLsResponse);
+  rpc GetSessionToken (google.protobuf.Empty) returns (SessionTokenResponse);
 }
 
 message URLShortenRequest {
@@ -36,4 +37,8 @@ message UserURLsResponse {
 message URLData {
   string short_url = 1;
   string original_url = 2;
+}
+
+message SessionTokenResponse {
+  string token = 1;
 }
