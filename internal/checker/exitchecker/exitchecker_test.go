@@ -10,6 +10,9 @@ import (
 func TestExitChecker(t *testing.T) {
 	testdata := analysistest.TestData()
 
-	analysistest.Run(t, testdata, exitchecker.Analyzer, "exitchecker/exit_in_main")
-	analysistest.Run(t, testdata, exitchecker.Analyzer, "exitchecker/exit_not_in_main")
+	analysistest.Run(t, testdata, exitchecker.Analyzer, "with_exit")
+
+	analysistest.Run(t, testdata, exitchecker.Analyzer, "without_exit")
+
+	analysistest.Run(t, testdata, exitchecker.Analyzer, "exit_in_function")
 }
