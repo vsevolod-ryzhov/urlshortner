@@ -37,14 +37,14 @@ func main() {
 	})
 	authCtx := metadata.NewOutgoingContext(ctx, md)
 
-	if err := SensRequests(authCtx, c); err != nil {
+	testLinks := []string{"https://ya.ru", "https://ya.com"}
+	if err := SendRequests(authCtx, c, testLinks); err != nil {
 		fmt.Println("error sending requests %w", err)
 		os.Exit(1)
 	}
 }
 
-func SensRequests(ctx context.Context, c pb.ShortenerServiceClient) error {
-	links := []string{"https://ya.ru", "https://ya.com"}
+func SendRequests(ctx context.Context, c pb.ShortenerServiceClient, links []string) error {
 	for _, link := range links {
 		responseShorten, errShorten := c.ShortenURL(ctx, pb.URLShortenRequest_builder{
 			Url: &link,
