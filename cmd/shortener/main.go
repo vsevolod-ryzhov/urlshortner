@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,8 +13,6 @@ import (
 
 	_ "net/http/pprof"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
-	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
@@ -26,11 +23,6 @@ import (
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/acme/autocert"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	pb "github.com/vsevolod-ryzhov/urlshortner.git/api/proto"
 )
 
 type tokenInfo struct {
@@ -91,14 +83,23 @@ func main() {
 
 	go startPprofServer()
 
-	srv := createServer(handlerChain)
+	srv := createHTTPServer(handlerChain)
 	go func() {
 		if err := startServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Log.Fatal("Server failed", zap.Error(err))
 		}
 	}()
 
-	go startGRPCServer()
+	grpcSrv := grpcserver.NewServer(grpcserver.ServerConfig{
+		Port:   ":3200",
+		Logger: logger.Log,
+	})
+
+	go func() {
+		if err := grpcSrv.Start(); err != nil {
+			logger.Log.Fatal("gRPC server failed", zap.Error(err))
+		}
+	}()
 
 	go func() {
 		<-sigInt
@@ -111,6 +112,7 @@ func main() {
 			logger.Log.Error("Server shutdown failed", zap.Error(err))
 		}
 		close(idleConnectionsClosed)
+		grpcSrv.Stop()
 	}()
 
 	<-idleConnectionsClosed
@@ -123,7 +125,7 @@ func startPprofServer() {
 	}
 }
 
-func createServer(handler http.Handler) *http.Server {
+func createHTTPServer(handler http.Handler) *http.Server {
 	server := &http.Server{
 		Addr:         config.Options.AppPort,
 		Handler:      handler,
@@ -153,71 +155,4 @@ func printBuildInfo() {
 	fmt.Println("Build version:", buildVersion)
 	fmt.Println("Build date:", buildDate)
 	fmt.Println("Build commit:", buildCommit)
-}
-
-func startGRPCServer() {
-	listen, err := net.Listen("tcp", ":3200")
-	if err != nil {
-		logger.Log.Fatal("gRPC listener init error", zap.Error(err))
-		return
-	}
-
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpcAuthInterceptor),
-	)
-
-	grpcServer := grpcserver.NewShortenerServer(logger.Log)
-
-	pb.RegisterShortenerServiceServer(s, grpcServer)
-
-	logger.Log.Info("gRPC server started successfully on :3200")
-	if grpcError := s.Serve(listen); grpcError != nil {
-		logger.Log.Fatal("gRPC server failed", zap.Error(grpcError))
-	}
-}
-
-func grpcAuth(ctx context.Context) (context.Context, error) {
-	token, err := auth.AuthFromMD(ctx, "bearer")
-	if err != nil {
-		return nil, err
-	}
-
-	tokenInfo, err := parseToken(token)
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
-	}
-
-	ctx = logging.InjectFields(ctx, logging.Fields{"user.id", tokenInfo.UserID})
-
-	ctx = context.WithValue(ctx, grpcserver.UserIDKey, tokenInfo.UserID)
-
-	return ctx, nil
-}
-
-func parseToken(token string) (*tokenInfo, error) {
-	session, err := service.DecodeAndVerifyCookie(token)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode cookie: %w", err)
-	}
-
-	return &tokenInfo{
-		UserID: session.UserID,
-	}, nil
-}
-
-func grpcAuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	publicMethods := map[string]bool{
-		"/vsevolodryzhov.urlshortner.proto.ShortenerService/GetSessionToken": true,
-	}
-
-	if publicMethods[info.FullMethod] {
-		return handler(ctx, req)
-	}
-
-	newCtx, err := grpcAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return handler(newCtx, req)
 }

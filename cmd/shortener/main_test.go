@@ -144,7 +144,7 @@ func TestCreateServer(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			server := createServer(handler)
+			server := createHTTPServer(handler)
 
 			assert.Equal(t, tt.appPort, server.Addr)
 			assert.NotNil(t, server.Handler)
