@@ -25,10 +25,6 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-type tokenInfo struct {
-	UserID string
-}
-
 var (
 	buildVersion = "N/A"
 	buildDate    = "N/A"
