@@ -181,3 +181,7 @@ func GetUserIDFromContext(ctx context.Context) (string, bool) {
 func EncodeSession(session *UserSession) (string, error) {
 	return encodeAndSignCookie(session)
 }
+
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}

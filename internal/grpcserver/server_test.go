@@ -1,4 +1,3 @@
-// internal/grpcserver/server_test.go
 package grpcserver
 
 import (
@@ -43,7 +42,7 @@ func TestShortenURL(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("successful shorten", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), UserIDKey, session.UserID)
+		ctx := withUserID(context.Background(), session.UserID)
 
 		req := pb.URLShortenRequest_builder{
 			Url: proto.String("https://example.com"),
@@ -82,7 +81,7 @@ func TestExpandURL(t *testing.T) {
 	session, err := service.DecodeAndVerifyCookie(tokenResp.GetToken())
 	require.NoError(t, err)
 
-	ctx := context.WithValue(context.Background(), UserIDKey, session.UserID)
+	ctx := withUserID(context.Background(), session.UserID)
 
 	shortenReq := pb.URLShortenRequest_builder{
 		Url: proto.String("https://example.com"),

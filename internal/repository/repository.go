@@ -2,8 +2,14 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
+)
+
+var (
+	sqlOpen             = sql.Open
+	applyMigrationsFunc = applyMigrations
 )
 
 type Repository interface {

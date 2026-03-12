@@ -96,7 +96,7 @@ func (s *Server) grpcAuth(ctx context.Context) (context.Context, error) {
 	}
 
 	ctx = logging.InjectFields(ctx, logging.Fields{"user.id", tokenInfo.UserID})
-	ctx = context.WithValue(ctx, UserIDKey, tokenInfo.UserID)
+	ctx = withUserID(ctx, tokenInfo.UserID)
 
 	return ctx, nil
 }

@@ -3,7 +3,6 @@ package grpcserver
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,19 +17,41 @@ import (
 	"go.uber.org/zap"
 )
 
-type grpcContextKey string
+type contextKey string
 
 const (
-	UserIDKey grpcContextKey = "userID"
+	userIDKey contextKey = "userID"
 )
 
-func (s *ShortenerServer) getUserIDFromContext(ctx context.Context) (string, error) {
-	userID, ok := ctx.Value(UserIDKey).(string)
-	if !ok || userID == "" {
+func getUserIDFromContext(ctx context.Context) (string, error) {
+	userIDVal := ctx.Value(userIDKey)
+	if userIDVal == nil {
 		return "", status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
+
+	userID, ok := userIDVal.(string)
+	if !ok {
+		return "", status.Errorf(codes.Internal, "invalid user ID type in context")
+	}
+
+	if userID == "" {
+		return "", status.Errorf(codes.Unauthenticated, "user ID is empty")
+	}
+
 	return userID, nil
 }
+
+func withUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
+
+//func (s *ShortenerServer) getUserIDFromContext(ctx context.Context) (string, error) {
+//	userID, ok := ctx.Value(UserIDKey).(string)
+//	if !ok || userID == "" {
+//		return "", status.Errorf(codes.Unauthenticated, "user not authenticated")
+//	}
+//	return userID, nil
+//}
 
 type ShortenerServer struct {
 	pb.UnimplementedShortenerServiceServer
@@ -46,7 +67,7 @@ func NewShortenerServer(logger *zap.Logger) *ShortenerServer {
 func (s *ShortenerServer) ShortenURL(ctx context.Context, in *pb.URLShortenRequest) (*pb.URLShortenResponse, error) {
 	var response pb.URLShortenResponse
 
-	userID, err := s.getUserIDFromContext(ctx)
+	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +86,7 @@ func (s *ShortenerServer) ShortenURL(ctx context.Context, in *pb.URLShortenReque
 func (s *ShortenerServer) ExpandURL(ctx context.Context, in *pb.URLExpandRequest) (*pb.URLExpandResponse, error) {
 	var response pb.URLExpandResponse
 
-	_, err := s.getUserIDFromContext(ctx)
+	_, err := getUserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,17 +104,21 @@ func (s *ShortenerServer) ExpandURL(ctx context.Context, in *pb.URLExpandRequest
 func (s *ShortenerServer) ListUserURLs(ctx context.Context, _ *emptypb.Empty) (*pb.UserURLsResponse, error) {
 	var response pb.UserURLsResponse
 
-	userID, err := s.getUserIDFromContext(ctx)
+	userID, err := getUserIDFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	urls, err := service.GetUserURLs(ctx, userID)
 	if err != nil {
-		return &response, errors.New("internal server error")
+		s.logger.Error("failed to get user URLs",
+			zap.String("user_id", userID),
+			zap.Error(err))
+
+		return nil, status.Errorf(codes.Internal, "internal server error")
 	}
 
-	data := make([]*pb.URLData, len(urls))
+	data := make([]*pb.URLData, 0, len(urls))
 	for _, url := range urls {
 		ud := pb.URLData_builder{
 			ShortUrl:    proto.String(url.ShortURL),

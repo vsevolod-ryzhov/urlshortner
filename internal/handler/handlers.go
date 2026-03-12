@@ -93,7 +93,7 @@ func handleCreateLink(res http.ResponseWriter, req *http.Request) {
 
 	body, err = readCreateLinkRequestBody(req)
 	if err != nil {
-		http.Error(res, "Bad request", http.StatusBadRequest)
+		http.Error(res, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 	}
 
 	url := string(body)
@@ -217,14 +217,14 @@ func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 
 	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok || userID == "" {
-		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	urls, err := service.GetUserURLs(req.Context(), userID)
 	if err != nil {
 		logger.Log.Error("Failed to get user URLs", zap.Error(err))
-		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
@@ -245,7 +245,7 @@ func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 
 	if err := json.NewEncoder(res).Encode(response); err != nil {
 		logger.Log.Error("Failed to encode user URLs", zap.Error(err))
-		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 }
@@ -253,7 +253,7 @@ func handleUserListURL(res http.ResponseWriter, req *http.Request) {
 func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok || userID == "" {
-		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
@@ -273,29 +273,29 @@ func handleDeleteURLs(res http.ResponseWriter, req *http.Request) {
 
 func handleStats(res http.ResponseWriter, req *http.Request) {
 	if config.Options.TrustedSubnet == "" {
-		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	_, IPNet, err := net.ParseCIDR(config.Options.TrustedSubnet)
 	if err != nil {
-		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 	userIP := net.ParseIP(req.Header.Get("X-Real-IP"))
 	if !IPNet.Contains(userIP) {
-		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	userID, ok := service.GetUserIDFromContext(req.Context())
 	if !ok || userID == "" {
-		http.Error(res, "Unauthorized", http.StatusUnauthorized)
+		http.Error(res, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 		return
 	}
 
 	links, users, error := service.GetStats(req.Context())
 	if error != nil {
-		http.Error(res, "Internal server error", http.StatusInternalServerError)
+		http.Error(res, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 
 	res.WriteHeader(http.StatusOK)

@@ -186,7 +186,6 @@ func TestGenerateFieldReset(t *testing.T) {
 				}
 			}
 
-			// Для отладки
 			t.Logf("Generated for %s:\n%s", tt.name, output)
 		})
 	}

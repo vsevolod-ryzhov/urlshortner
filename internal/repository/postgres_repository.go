@@ -42,7 +42,7 @@ func applyMigrations(db *sql.DB) error {
 
 // NewPostgresRepository creates new and applies migrations.
 func NewPostgresRepository(connectionString string) (*PostgresRepository, error) {
-	db, err := sql.Open("pgx", connectionString)
+	db, err := sqlOpen("pgx", connectionString)
 	if err != nil {
 		return nil, err
 	}
