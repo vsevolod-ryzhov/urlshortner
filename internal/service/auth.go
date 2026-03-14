@@ -41,7 +41,7 @@ type UserSession struct {
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie(cookieName); err == nil {
-			session, err := decodeAndVerifyCookie(cookie.Value)
+			session, err := DecodeAndVerifyCookie(cookie.Value)
 			if err != nil {
 				logger.Log.Debug("Cookie verifying error", zap.Error(err))
 			}
@@ -100,7 +100,7 @@ func encodeAndSignCookie(session *UserSession) (string, error) {
 	return base64.URLEncoding.EncodeToString(encrypted), nil
 }
 
-func decodeAndVerifyCookie(cookieValue string) (*UserSession, error) {
+func DecodeAndVerifyCookie(cookieValue string) (*UserSession, error) {
 	encrypted, err := base64.URLEncoding.DecodeString(cookieValue)
 	if err != nil {
 		return nil, ErrInvalidCookie
@@ -176,4 +176,12 @@ func decrypt(ciphertext []byte) ([]byte, error) {
 func GetUserIDFromContext(ctx context.Context) (string, bool) {
 	userID, ok := ctx.Value(userIDKey).(string)
 	return userID, ok
+}
+
+func EncodeSession(session *UserSession) (string, error) {
+	return encodeAndSignCookie(session)
+}
+
+func WithUserID(ctx context.Context, userID string) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
 }

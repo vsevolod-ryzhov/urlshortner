@@ -9,10 +9,18 @@ import (
 	"golang.org/x/tools/go/analysis/passes/printf"
 	"golang.org/x/tools/go/analysis/passes/shadow"
 	"golang.org/x/tools/go/analysis/passes/structtag"
+	"honnef.co/go/tools/quickfix"
+	"honnef.co/go/tools/simple"
 	"honnef.co/go/tools/staticcheck"
+	"honnef.co/go/tools/stylecheck"
 )
 
 func main() {
+	analyzers := getAnalyzers()
+	multichecker.Main(analyzers...)
+}
+
+func getAnalyzers() []*analysis.Analyzer {
 	analyzers := []*analysis.Analyzer{
 		printf.Analyzer,
 		shadow.Analyzer,
@@ -22,18 +30,25 @@ func main() {
 		exitchecker.Analyzer,
 	}
 
-	for _, analyzer := range staticcheck.Analyzers {
-		if len(analyzer.Analyzer.Name) >= 2 && analyzer.Analyzer.Name[:2] == "SA" {
-			analyzers = append(analyzers, analyzer.Analyzer)
+	for _, a := range staticcheck.Analyzers {
+		analyzers = append(analyzers, a.Analyzer)
+	}
+
+	for _, a := range quickfix.Analyzers {
+		if a.Analyzer.Name == "QF1007" {
+			analyzers = append(analyzers, a.Analyzer)
 		}
-		if analyzer.Analyzer.Name == "QF1007" {
-			analyzers = append(analyzers, analyzer.Analyzer)
+	}
+
+	for _, a := range stylecheck.Analyzers {
+		if a.Analyzer.Name == "ST1023" {
+			analyzers = append(analyzers, a.Analyzer)
 		}
-		if analyzer.Analyzer.Name == "ST1023" {
-			analyzers = append(analyzers, analyzer.Analyzer)
-		}
-		if analyzer.Analyzer.Name == "S1039" {
-			analyzers = append(analyzers, analyzer.Analyzer)
+	}
+
+	for _, a := range simple.Analyzers {
+		if a.Analyzer.Name == "S1039" {
+			analyzers = append(analyzers, a.Analyzer)
 		}
 	}
 
@@ -46,5 +61,5 @@ func main() {
 		}
 	}
 
-	multichecker.Main(analyzers...)
+	return analyzers
 }

@@ -146,3 +146,8 @@ func BatchDeleteURLs(userID string, shortIDs []model.BatchDeleteItem) {
 		SubmitDeleteTask(userID, string(id))
 	}
 }
+
+// GetStats returns number of stored links and users
+func GetStats(context context.Context) (int, int, error) {
+	return Repo.GetStats(context)
+}

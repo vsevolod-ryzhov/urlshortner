@@ -42,7 +42,7 @@ func applyMigrations(db *sql.DB) error {
 
 // NewPostgresRepository creates new and applies migrations.
 func NewPostgresRepository(connectionString string) (*PostgresRepository, error) {
-	db, err := sql.Open("pgx", connectionString)
+	db, err := sqlOpen("pgx", connectionString)
 	if err != nil {
 		return nil, err
 	}
@@ -193,4 +193,16 @@ func (r *PostgresRepository) BatchDelete(ctx context.Context, userID string, sho
 	}
 
 	return tx.Commit()
+}
+
+// GetStats returns total numbers of links and unique users in storage
+func (r *PostgresRepository) GetStats(ctx context.Context) (int, int, error) {
+	var linksCount, usersCount int
+	query := `SELECT count(*) as links, count(distinct user_id) as users FROM links`
+	err := r.db.QueryRowContext(ctx, query).Scan(&linksCount, &usersCount)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return linksCount, usersCount, nil
 }

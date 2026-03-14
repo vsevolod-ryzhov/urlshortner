@@ -2,8 +2,14 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/model"
+)
+
+var (
+	sqlOpen             = sql.Open
+	applyMigrationsFunc = applyMigrations
 )
 
 type Repository interface {
@@ -15,4 +21,5 @@ type Repository interface {
 	Close() error
 	GetData() map[string]model.ShortenedRecord
 	BatchDelete(ctx context.Context, userID string, shortIDs []string) error
+	GetStats(ctx context.Context) (int, int, error)
 }

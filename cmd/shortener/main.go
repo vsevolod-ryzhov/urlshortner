@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -16,6 +15,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/grpcserver"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
@@ -30,75 +30,117 @@ var (
 	buildCommit  = "N/A"
 )
 
-func main() {
-	sigInt := make(chan os.Signal, 1)
-	signal.Notify(sigInt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	idleConnectionsClosed := make(chan struct{})
-
+func Run(ctx context.Context) error {
 	config.ParseFlags()
+
+	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
+		return fmt.Errorf("logger initialization failed: %w", err)
+	}
 
 	printBuildInfo()
 
-	if err := logger.Initialize(config.Options.FlagLogLevel); err != nil {
+	auditObserver := setupAudit()
 
-		panic(err)
+	repo, err := repository.NewRepository()
+	if err != nil {
+		return fmt.Errorf("failed to create repository: %w", err)
 	}
+	defer repo.Close()
 
-	auditObserver := audit.NewAuditMessenger()
+	service.InitRepo(repo)
+	service.InitDeleteManager(repo, 3)
+
+	handlerChain := createHandlerChain(auditObserver)
+
+	go startPprofServer()
+
+	httpServer := createHTTPServer(handlerChain)
+	grpcServer := grpcserver.NewServer(grpcserver.ServerConfig{
+		Port:   ":3200",
+		Logger: logger.Log,
+	})
+
+	return runServers(ctx, httpServer, grpcServer)
+}
+
+func setupAudit() *audit.AuditMessenger {
+	observer := audit.NewAuditMessenger()
 
 	if config.Options.AuditFilePath != "" {
-		auditObserver.RegisterObserver(&audit.FileObserver{
+		observer.RegisterObserver(&audit.FileObserver{
 			FilePath: config.Options.AuditFilePath,
 		})
 	}
 
 	if config.Options.AuditURL != "" {
-		auditObserver.RegisterObserver(&audit.HTTPObserver{
+		observer.RegisterObserver(&audit.HTTPObserver{
 			URL: config.Options.AuditURL,
 		})
 	}
 
-	repo, repoErr := repository.NewRepository()
-	if repoErr != nil {
-		logger.Log.Fatal("Failed to create repository", zap.Error(repoErr))
-	}
-	if repo != nil {
-		defer repo.Close()
-		service.InitRepo(repo)
-		service.InitDeleteManager(repo, 3)
-	}
+	return observer
+}
 
-	handlerChain := logger.WithLogging(
+func createHandlerChain(auditObserver *audit.AuditMessenger) http.Handler {
+	return logger.WithLogging(
 		handler.GzipMiddleware(
 			service.AuthMiddleware(
 				handler.MakeHandler(auditObserver),
 			),
 		),
 	)
+}
 
-	go startPprofServer()
+func runServers(ctx context.Context, httpServer *http.Server, grpcServer *grpcserver.Server) error {
+	errCh := make(chan error, 2)
 
-	srv := createServer(handlerChain)
 	go func() {
-		if err := startServer(srv); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Log.Fatal("Server failed", zap.Error(err))
+		logger.Log.Info("Starting HTTP server", zap.String("addr", httpServer.Addr))
+		if err := startServer(httpServer); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errCh <- fmt.Errorf("HTTP server failed: %w", err)
 		}
 	}()
 
 	go func() {
-		<-sigInt
-		logger.Log.Info("Shutting down...")
-
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		if err := srv.Shutdown(ctx); err != nil {
-			logger.Log.Error("Server shutdown failed", zap.Error(err))
+		logger.Log.Info("Starting gRPC server", zap.String("port", ":3200"))
+		if err := grpcServer.Start(); err != nil {
+			errCh <- fmt.Errorf("gRPC server failed: %w", err)
 		}
-		close(idleConnectionsClosed)
 	}()
 
-	<-idleConnectionsClosed
+	select {
+	case <-ctx.Done():
+		logger.Log.Info("Shutting down servers...")
+		return shutdownServers(httpServer, grpcServer)
+	case err := <-errCh:
+		return err
+	}
+}
+
+func shutdownServers(httpServer *http.Server, grpcServer *grpcserver.Server) error {
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var shutdownErr error
+
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		shutdownErr = fmt.Errorf("HTTP shutdown error: %w", err)
+		logger.Log.Error("HTTP server shutdown failed", zap.Error(err))
+	}
+
+	grpcServer.Stop()
+
+	return shutdownErr
+}
+
+func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer cancel()
+
+	if err := Run(ctx); err != nil {
+		logger.Log.Fatal("Application failed", zap.Error(err))
+	}
 }
 
 func startPprofServer() {
@@ -108,7 +150,7 @@ func startPprofServer() {
 	}
 }
 
-func createServer(handler http.Handler) *http.Server {
+func createHTTPServer(handler http.Handler) *http.Server {
 	server := &http.Server{
 		Addr:         config.Options.AppPort,
 		Handler:      handler,

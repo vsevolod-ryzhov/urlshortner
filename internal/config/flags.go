@@ -19,7 +19,8 @@ var Options struct {
 	Environment      string `env:"ENVIRONMENT" envDefault:"development"` // Application environment
 	AuditFilePath    string // Path to audit file where app logs will be stored
 	AuditURL         string // URL for audit service where app logs will be sent
-	HTTPSEnabled     bool
+	HTTPSEnabled     bool   // Enables SSL support
+	TrustedSubnet    string // For this subnet /api/internal/stats endpoint will be enabled
 }
 
 type ConfigurationFile struct {
@@ -33,6 +34,7 @@ type ConfigurationFile struct {
 	AuditFilePath    string `json:"audit_file_path"`
 	AuditURL         string `json:"audit_url"`
 	HTTPSEnabled     bool   `json:"https_enabled"`
+	TrustedSubnet    string `json:"trusted_subnet"`
 }
 
 // ParseFlags func reads startup arguments and env variables
@@ -48,6 +50,7 @@ func ParseFlags() {
 	flag.StringVar(&Options.AuditFilePath, "audit-file", "", "Audit file path")
 	flag.StringVar(&Options.AuditURL, "audit-url", "", "Audit URL")
 	flag.BoolVar(&Options.HTTPSEnabled, "s", false, "Enable HTTPS")
+	flag.StringVar(&Options.TrustedSubnet, "t", "", "Trusted subnet")
 
 	flag.Parse()
 
@@ -87,6 +90,10 @@ func ParseFlags() {
 	}
 	if isHTTPSEnabled, exists := os.LookupEnv("ENABLE_HTTPS"); exists {
 		Options.HTTPSEnabled, _ = strconv.ParseBool(isHTTPSEnabled)
+	}
+
+	if trustedSubnet, exists := os.LookupEnv("TRUSTED_SUBNET"); exists {
+		Options.TrustedSubnet = trustedSubnet
 	}
 
 	if Options.CookieSecret == "" {
@@ -148,6 +155,10 @@ func loadConfigFromFile(filePath string) error {
 
 	if !isFlagPassed("s") && fileConfig.HTTPSEnabled {
 		Options.HTTPSEnabled = fileConfig.HTTPSEnabled
+	}
+
+	if Options.TrustedSubnet == "" && fileConfig.TrustedSubnet != "" {
+		Options.TrustedSubnet = fileConfig.TrustedSubnet
 	}
 
 	return nil

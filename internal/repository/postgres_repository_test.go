@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -24,6 +25,11 @@ type PostgresRepositoryTestSuite struct {
 	mockDB sqlmock.Sqlmock
 	ctx    context.Context
 }
+
+var (
+	originalSQLOpen         = sqlOpen
+	originalApplyMigrations = applyMigrationsFunc
+)
 
 func (suite *PostgresRepositoryTestSuite) SetupSuite() {
 	suite.ctx = context.Background()
@@ -342,4 +348,84 @@ func generateRandomString(length int) string {
 		return ""
 	}
 	return hex.EncodeToString(b)
+}
+
+func (suite *PostgresRepositoryTestSuite) TestGetStats_Success() {
+	expectedLinks := 10
+	expectedUsers := 5
+
+	rows := sqlmock.NewRows([]string{"links", "users"}).AddRow(expectedLinks, expectedUsers)
+
+	suite.mockDB.ExpectQuery(`SELECT count\(\*\) as links, count\(distinct user_id\) as users FROM links`).
+		WillReturnRows(rows)
+
+	links, users, err := suite.repo.GetStats(suite.ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), expectedLinks, links)
+	assert.Equal(suite.T(), expectedUsers, users)
+	assert.NoError(suite.T(), suite.mockDB.ExpectationsWereMet())
+}
+
+func (suite *PostgresRepositoryTestSuite) TestGetStats_DBError() {
+	expectedError := fmt.Errorf("database connection lost")
+
+	suite.mockDB.ExpectQuery(`SELECT count\(\*\) as links, count\(distinct user_id\) as users FROM links`).
+		WillReturnError(expectedError)
+
+	links, users, err := suite.repo.GetStats(suite.ctx)
+
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), expectedError, err)
+	assert.Equal(suite.T(), 0, links)
+	assert.Equal(suite.T(), 0, users)
+	assert.NoError(suite.T(), suite.mockDB.ExpectationsWereMet())
+}
+
+func TestNewPostgresRepository_SQLOpenError(t *testing.T) {
+	defer func() {
+		sqlOpen = originalSQLOpen
+		applyMigrationsFunc = originalApplyMigrations
+	}()
+
+	expectedErr := errors.New("failed to open db")
+	sqlOpen = func(driverName, dataSourceName string) (*sql.DB, error) {
+		return nil, expectedErr
+	}
+
+	repo, err := NewPostgresRepository("any-dsn")
+
+	assert.Error(t, err)
+	assert.Nil(t, repo)
+	assert.ErrorIs(t, err, expectedErr)
+}
+
+func TestNewPostgresRepository_PingError(t *testing.T) {
+	defer func() {
+		sqlOpen = originalSQLOpen
+		applyMigrationsFunc = originalApplyMigrations
+	}()
+
+	db, mock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+	require.NoError(t, err)
+	defer db.Close()
+
+	expectedErr := errors.New("ping failed")
+	mock.ExpectPing().WillReturnError(expectedErr)
+
+	sqlOpen = func(driverName, dataSourceName string) (*sql.DB, error) {
+		return db, nil
+	}
+
+	applyMigrationsFunc = func(db *sql.DB) error {
+		t.Error("applyMigrations should not be called")
+		return nil
+	}
+
+	repo, err := NewPostgresRepository("any-dsn")
+
+	assert.Error(t, err)
+	assert.Nil(t, repo)
+	assert.ErrorIs(t, err, expectedErr)
+	assert.NoError(t, mock.ExpectationsWereMet())
 }

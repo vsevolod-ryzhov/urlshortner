@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,11 +18,17 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/audit"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/config"
+	"github.com/vsevolod-ryzhov/urlshortner.git/internal/grpcserver"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/handler"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/logger"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/repository"
 	"github.com/vsevolod-ryzhov/urlshortner.git/internal/service"
+	"go.uber.org/zap"
 )
+
+func resetFlags() {
+	flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+}
 
 func TestMain(m *testing.M) {
 	oldArgs := os.Args
@@ -144,7 +151,7 @@ func TestCreateServer(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			server := createServer(handler)
+			server := createHTTPServer(handler)
 
 			assert.Equal(t, tt.appPort, server.Addr)
 			assert.NotNil(t, server.Handler)
@@ -444,5 +451,207 @@ func TestSignalHandling(t *testing.T) {
 	case <-sigChan:
 	case <-time.After(200 * time.Millisecond):
 		t.Fatal("Signal not received")
+	}
+}
+
+func TestRun_WithAudit(t *testing.T) {
+	resetFlags()
+	tmpFile, err := os.CreateTemp("", "audit_*.log")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	oldArgs := os.Args
+	oldAuditFile := config.Options.AuditFilePath
+	oldPort := config.Options.AppPort
+
+	defer func() {
+		os.Args = oldArgs
+		config.Options.AuditFilePath = oldAuditFile
+		config.Options.AppPort = oldPort
+	}()
+
+	os.Args = []string{"cmd", "-a", "localhost:0", "-l", "debug"}
+	config.Options.AuditFilePath = tmpFile.Name()
+	config.Options.AppPort = "localhost:0"
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Run(ctx)
+	}()
+
+	select {
+	case err := <-errCh:
+		assert.NoError(t, err)
+		content, _ := os.ReadFile(tmpFile.Name())
+		t.Logf("Audit content: %s", string(content))
+	case <-time.After(3 * time.Second):
+		t.Fatal("Run timed out")
+	}
+}
+
+func TestRun_Success(t *testing.T) {
+	resetFlags()
+	oldArgs := os.Args
+	oldEnv := os.Getenv("SERVER_ADDRESS")
+	oldPort := config.Options.AppPort
+	oldAuditFile := config.Options.AuditFilePath
+	oldAuditURL := config.Options.AuditURL
+
+	defer func() {
+		os.Args = oldArgs
+		os.Setenv("SERVER_ADDRESS", oldEnv)
+		config.Options.AppPort = oldPort
+		config.Options.AuditFilePath = oldAuditFile
+		config.Options.AuditURL = oldAuditURL
+	}()
+
+	os.Args = []string{"cmd", "-a", "localhost:0", "-l", "debug"}
+	os.Setenv("SERVER_ADDRESS", "")
+	config.Options.AuditFilePath = ""
+	config.Options.AuditURL = ""
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Run(ctx)
+	}()
+
+	select {
+	case err := <-errCh:
+		assert.NoError(t, err, "Run should complete without error")
+	case <-time.After(3 * time.Second):
+		t.Fatal("Run timed out")
+	}
+}
+
+func TestRun_InvalidLoggerLevel(t *testing.T) {
+	resetFlags()
+	oldArgs := os.Args
+	oldLevel := config.Options.FlagLogLevel
+
+	defer func() {
+		os.Args = oldArgs
+		config.Options.FlagLogLevel = oldLevel
+	}()
+
+	os.Args = []string{"cmd", "-l", "invalid_level"}
+
+	ctx := context.Background()
+	err := Run(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "logger initialization failed")
+}
+
+func TestShutdownServers(t *testing.T) {
+	resetFlags()
+	httpServer := &http.Server{
+		Addr:    "localhost:0",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+	}
+
+	grpcServer := grpcserver.NewServer(grpcserver.ServerConfig{
+		Port:   ":0",
+		Logger: zap.NewNop(),
+	})
+
+	go func() {
+		_ = httpServer.ListenAndServe()
+	}()
+	time.Sleep(100 * time.Millisecond)
+
+	err := shutdownServers(httpServer, grpcServer)
+	assert.NoError(t, err)
+}
+
+func TestSetupAudit(t *testing.T) {
+	resetFlags()
+	tests := []struct {
+		name        string
+		filePath    string
+		url         string
+		expectError bool
+	}{
+		{
+			name:        "no observers",
+			filePath:    "",
+			url:         "",
+			expectError: false,
+		},
+		{
+			name:        "file observer",
+			filePath:    "/tmp/test.log",
+			url:         "",
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldFile := config.Options.AuditFilePath
+			oldURL := config.Options.AuditURL
+
+			defer func() {
+				config.Options.AuditFilePath = oldFile
+				config.Options.AuditURL = oldURL
+			}()
+
+			config.Options.AuditFilePath = tt.filePath
+			config.Options.AuditURL = tt.url
+
+			observer := setupAudit()
+			assert.NotNil(t, observer)
+		})
+	}
+}
+
+func TestRun_RepositoryError(t *testing.T) {
+	resetFlags()
+	oldDSN := os.Getenv("DATABASE_DSN")
+	defer os.Setenv("DATABASE_DSN", oldDSN)
+
+	os.Setenv("DATABASE_DSN", "postgres://invalid:invalid@localhost:9999/invalid")
+
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Args = []string{"cmd", "-d", "postgres://invalid:invalid@localhost:9999/invalid"}
+
+	ctx := context.Background()
+	err := Run(ctx)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create repository")
+}
+
+func TestRun_WithCancel(t *testing.T) {
+	resetFlags()
+	oldArgs := os.Args
+	defer func() { os.Args = oldArgs }()
+
+	os.Args = []string{"cmd", "-a", "localhost:0", "-l", "debug"}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Run(ctx)
+	}()
+
+	time.Sleep(500 * time.Millisecond)
+
+	cancel()
+
+	select {
+	case err := <-errCh:
+		assert.NoError(t, err, "Run should exit cleanly on cancel")
+	case <-time.After(3 * time.Second):
+		t.Fatal("Run did not exit after cancel")
 	}
 }
